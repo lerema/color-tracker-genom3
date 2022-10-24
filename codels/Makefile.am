@@ -1,23 +1,23 @@
 
-lib_LTLIBRARIES = libCT_drone_codels.la
+lib_LTLIBRARIES = libColorTracker_codels.la
 
-libCT_drone_codels_la_SOURCES  =	CT_drone_c_types.h
-libCT_drone_codels_la_SOURCES +=	CT_drone_codels.c
-libCT_drone_codels_la_SOURCES +=	CT_drone_track_codels.c
+libColorTracker_codels_la_SOURCES  =	ColorTracker_c_types.h
+libColorTracker_codels_la_SOURCES +=	ColorTracker_codels.c
+libColorTracker_codels_la_SOURCES +=	ColorTracker_track_codels.c
 
-libCT_drone_codels_la_CPPFLAGS =	$(requires_CFLAGS)
-libCT_drone_codels_la_LIBADD   =	$(requires_LIBS)
-libCT_drone_codels_la_CPPFLAGS+=	$(codels_requires_CFLAGS)
-libCT_drone_codels_la_LIBADD  +=	$(codels_requires_LIBS)
-libCT_drone_codels_la_LDFLAGS  =	-release $(PACKAGE_VERSION)
+libColorTracker_codels_la_CPPFLAGS =	$(requires_CFLAGS)
+libColorTracker_codels_la_LIBADD   =	$(requires_LIBS)
+libColorTracker_codels_la_CPPFLAGS+=	$(codels_requires_CFLAGS)
+libColorTracker_codels_la_LIBADD  +=	$(codels_requires_LIBS)
+libColorTracker_codels_la_LDFLAGS  =	-release $(PACKAGE_VERSION)
 
 
 # idl  mappings
-BUILT_SOURCES=	CT_drone_c_types.h
+BUILT_SOURCES=	ColorTracker_c_types.h
 CLEANFILES=	${BUILT_SOURCES}
 
-CT_drone_c_types.h: ${top_srcdir}/ColorTracker.gen
+ColorTracker_c_types.h: ${top_srcdir}/ColorTracker.gen
 	${GENOM3}  mappings \
 	  -MD -MF .deps/$@.d -MT $@ --signature -l c $< >$@
 
--include .deps/CT_drone_c_types.h.d
+-include .deps/ColorTracker_c_types.h.d

@@ -5,7 +5,7 @@
 // rather be added to the "doc" attributes of the genom objects defined in
 // ColorTracker.gen.
 
-= CT_drone component
+= ColorTracker component
 shasthamsa@laas.fr
 1.0
 :toc: left
@@ -326,7 +326,7 @@ a|.Inputs
 
 a|.Throws
 [disc]
- * `exception ::CT_drone::e_OPENCV_ERROR`
+ * `exception ::ColorTracker::e_OPENCV_ERROR`
 
 |===
 
@@ -349,11 +349,38 @@ a|.Outputs
 
 a|.Throws
 [disc]
- * `exception ::CT_drone::e_OPENCV_ERROR`
+ * `exception ::ColorTracker::e_OPENCV_ERROR`
 
 |===
 
 Get the color to be detected.
+
+'''
+
+[[get_image_frame]]
+=== get_image_frame (function)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Outputs
+[disc]
+ * `struct ::or::sensor::frame` `image_frame`: Image frame
+ ** `struct ::or::time::ts` `ts`
+ *** `long` `sec`
+ *** `long` `nsec`
+ ** `boolean` `compressed`
+ ** `unsigned short` `height`
+ ** `unsigned short` `width`
+ ** `unsigned short` `bpp`
+ ** `sequence< octet >` `pixels`
+
+a|.Throws
+[disc]
+ * `exception ::ColorTracker::e_BAD_IMAGE_PORT`
+
+|===
+
+Get the image frame.
 
 '''
 
@@ -364,17 +391,17 @@ Get the color to be detected.
 |===
 a|.Throws
 [disc]
- * `exception ::CT_drone::e_OUT_OF_MEM`
+ * `exception ::ColorTracker::e_OUT_OF_MEM`
 
- * `exception ::CT_drone::e_BAD_IMAGE_PORT`
+ * `exception ::ColorTracker::e_BAD_IMAGE_PORT`
 
- * `exception ::CT_drone::e_BAD_POSE_PORT`
+ * `exception ::ColorTracker::e_BAD_POSE_PORT`
 
- * `exception ::CT_drone::e_BAD_OG_PORT`
+ * `exception ::ColorTracker::e_BAD_OG_PORT`
 
- * `exception ::CT_drone::e_BAD_TARGET_PORT`
+ * `exception ::ColorTracker::e_BAD_TARGET_PORT`
 
- * `exception ::CT_drone::e_OPENCV_ERROR`
+ * `exception ::ColorTracker::e_OPENCV_ERROR`
 
 a|.Context
 [disc]
@@ -396,11 +423,11 @@ Track the plates/objects in the image.
 |===
 a|.Throws
 [disc]
- * `exception ::CT_drone::e_OUT_OF_MEM`
+ * `exception ::ColorTracker::e_OUT_OF_MEM`
 
- * `exception ::CT_drone::e_BAD_OG_PORT`
+ * `exception ::ColorTracker::e_BAD_OG_PORT`
 
- * `exception ::CT_drone::e_OPENCV_ERROR`
+ * `exception ::ColorTracker::e_OPENCV_ERROR`
 
 a|.Context
 [disc]
@@ -428,7 +455,7 @@ a|.Context
 * Updates port `<<TrackedPose>>`
 a|.Throws
 [disc]
- * `exception ::CT_drone::e_OUT_OF_MEM`
+ * `exception ::ColorTracker::e_OUT_OF_MEM`
 
 |===
 

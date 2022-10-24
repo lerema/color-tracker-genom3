@@ -29,7 +29,7 @@
 
 
 /* -------------------------- MODULE DECLARATION --------------------------- */
-component CT_drone {
+component ColorTracker {
   version "1.0";
   email	  "shasthamsa@laas.fr";
   lang	  "c";
@@ -114,6 +114,13 @@ component CT_drone {
     doc "Get the color to be detected.";
     codel GetColor(ids out color);
     throw e_OPENCV_ERROR;
+  };
+
+  function get_image_frame(out or::sensor::frame image_frame =: "Image frame")
+  {
+    doc "Get the image frame.";
+    codel GetImageFrame(ids out image_frame);
+    throw e_BAD_IMAGE_PORT;
   };
 
   /* ------------------ SERVICE DEFINITION: Events -------------------- */

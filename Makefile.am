@@ -2,12 +2,12 @@
 ACLOCAL_AMFLAGS=	-I autoconf
 
 # IDL source files
-idldir=		$(datadir)/idl/CT_drone
+idldir=		$(datadir)/idl/ColorTracker
 nobase_dist_idl_DATA= ColorTracker.gen ColorTrack.idl Environment.idl
 
 pkgconfigdir=	$(libdir)/pkgconfig
 pkgconfig_DATA=
-pkgconfig_DATA+= CT_drone-genom3.pc
+pkgconfig_DATA+= ColorTracker-genom3.pc
 
 # we don't want generated templates in the distribution
 #

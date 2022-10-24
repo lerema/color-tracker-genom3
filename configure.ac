@@ -1,12 +1,12 @@
 
-dnl Autoconf file for building CT_drone codels library.
+dnl Autoconf file for building ColorTracker codels library.
 
 AC_PREREQ(2.59)
 
-AC_INIT([CT_drone-genom3],[1.0],[shasthamsa@laas.fr])
+AC_INIT([ColorTracker-genom3],[1.0],[shasthamsa@laas.fr])
 AC_CONFIG_MACRO_DIR([autoconf])
 AC_CONFIG_AUX_DIR([autoconf])
-AC_CONFIG_HEADERS([autoconf/acCT_drone.h])
+AC_CONFIG_HEADERS([autoconf/acColorTracker.h])
 AM_INIT_AUTOMAKE([foreign no-define])
 
 dnl Compilers
@@ -50,8 +50,8 @@ AM_MISSING_PROG([ASCIIDOCTOR], [asciidoctor])
 
 dnl Output
 AC_CONFIG_FILES([
-	CT_drone-genom3.pc
-	CT_drone-genom3-uninstalled.pc
+	ColorTracker-genom3.pc
+	ColorTracker-genom3-uninstalled.pc
 	Makefile
 	codels/Makefile
 ])
