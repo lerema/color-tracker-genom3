@@ -1,5 +1,7 @@
 
 #include "acColorTracker.h"
+#include "fg3utils/trace_f.h"
+#include "fg3utils/macros.h"
 
 #include "ColorTracker_c_types.h"
 
@@ -12,39 +14,34 @@
  * Throws ColorTracker_e_OPENCV_ERROR.
  */
 genom_event
-SetColor(const or_ColorTrack_ColorInfo *color,
-         const genom_context self)
+SetColor(const or_ColorTrack_ColorInfo *color_info,
+         or_ColorTrack_ColorInfo *color, const genom_context self)
 {
-  /* skeleton sample: insert your code */
-  /* skeleton sample */ return genom_ok;
+  *color = *color_info;
+  return genom_ok;
 }
 
 
-/* --- Function get_color ----------------------------------------------- */
+/* --- Function set_map_size -------------------------------------------- */
 
-/** Codel GetColor of function get_color.
+/** Codel SetMapSize of function set_map_size.
  *
  * Returns genom_ok.
- * Throws ColorTracker_e_OPENCV_ERROR.
+ * Throws ColorTracker_e_BAD_OG_PORT.
  */
 genom_event
-GetColor(or_ColorTrack_ColorInfo *color, const genom_context self)
+SetMapSize(uint8_t map_width, uint8_t map_height,
+           ColorTracker_BlobMap *blob_map, const genom_context self)
 {
-  /* skeleton sample: insert your code */
-  /* skeleton sample */ return genom_ok;
-}
+  if (map_width <= 0 || map_height <= 0) {
+    CODEL_LOG_ERROR("Invalid map size: %f x %f", map_width, map_height);
+    return ColorTracker_e_BAD_OG_PORT(self);
+  }
 
 
-/* --- Function get_image_frame ----------------------------------------- */
+  blob_map->grid_map.width = map_width;
+  blob_map->grid_map.height = map_height;
+  // blob_map->grid_map.data = (uint8_t *)malloc(map_width * map_height);
 
-/** Codel GetImageFrame of function get_image_frame.
- *
- * Returns genom_ok.
- * Throws ColorTracker_e_BAD_IMAGE_PORT.
- */
-genom_event
-GetImageFrame(or_sensor_frame *image_frame, const genom_context self)
-{
-  /* skeleton sample: insert your code */
-  /* skeleton sample */ return genom_ok;
+  return genom_ok;
 }
