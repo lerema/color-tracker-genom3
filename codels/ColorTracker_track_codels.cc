@@ -2,6 +2,7 @@
 #include "acColorTracker.h"
 #include "fg3utils/trace_f.h"
 #include "fg3utils/macros.h"
+// #include "tracking.hpp"
 
 #include "ColorTracker_c_types.h"
 

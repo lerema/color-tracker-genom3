@@ -2,8 +2,8 @@
 lib_LTLIBRARIES = libColorTracker_codels.la
 
 libColorTracker_codels_la_SOURCES  =	ColorTracker_c_types.h
-libColorTracker_codels_la_SOURCES +=	ColorTracker_codels.c
-libColorTracker_codels_la_SOURCES +=	ColorTracker_track_codels.c
+libColorTracker_codels_la_SOURCES +=	ColorTracker_codels.cc
+libColorTracker_codels_la_SOURCES +=	ColorTracker_track_codels.cc
 
 libColorTracker_codels_la_CPPFLAGS =	$(requires_CFLAGS)
 libColorTracker_codels_la_LIBADD   =	$(requires_LIBS)
