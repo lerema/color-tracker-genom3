@@ -311,6 +311,21 @@ a|.Data structure
 
 == Services
 
+[[SetDebug]]
+=== SetDebug (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `boolean` `debug`
+
+|===
+
+Set the debug mode.
+
+'''
+
 [[set_color]]
 === set_color (function)
 
@@ -405,8 +420,7 @@ a|.Context
 [disc]
   * In task `<<track>>`
   (frequency 10.0 _Hz_)
-  * Reads port `<<Intrinsics>>`
-  * Reads port `<<Extrinsics>>`
+  * Reads port `<<Frame>>`
   * Updates port `<<OccupancyGrid>>`
   * Updates port `<<TrackedPose>>`
   * Interrupts `<<publish_occupancy_grid>>`
@@ -489,5 +503,7 @@ a|.Throws
  * `exception ::ColorTracker::e_BAD_IMAGE_PORT`
 
 |===
+
+Track the object in the image.
 
 '''

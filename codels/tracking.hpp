@@ -18,71 +18,70 @@
 #ifndef TRACKING_HPP
 #define TRACKING_HPP
 
-#include <opencv4/opencv2/opencv.hpp>
-#include <opencv4/opencv2/core/types_c.h>
-// #include "opencv2/core/types_c.h"
+#include <opencv2/opencv.hpp>
+#include <opencv2/core/types_c.h>
 
 
 using namespace std;
-bool binarisation(IplImage* image, int b, int g, int r, int tolerance, CvPoint *coord, int *nbPixels) {
-        int x, y;
-        IplImage *mask, *bgr;
-        IplConvKernel *kernel;
-        int sommeX = 0, sommeY = 0;
 
-        *nbPixels = 0;
+namespace Tracking
+{
+bool detectObject(cv::Mat &image, int b, int g, int r, int tolerance, double &x, double &y, bool debug=false) {
 
-        coord->x=0;
-        coord->y=0;
         // Create the mask &initialize it to white (no color detected)
-        mask = cvCreateImage(cvGetSize(image), image->depth, 1);
-        // Create the bgr image
-        bgr = cvCloneImage(image);
+        auto mask = cv::Mat(image->size(), image->type());
+        // Create the thresholded image
+        auto bgr = image->clone();
+
         // We create the mask
-        cvInRangeS(bgr, cvScalar(b-tolerance, g-tolerance,r-tolerance), cvScalar(b+tolerance, g+tolerance,r+tolerance), mask);
-        // Create kernels for the morphological operation
-        kernel = cvCreateStructuringElementEx(5, 5, 2, 2, CV_SHAPE_ELLIPSE);
+        cv::inRange(bgr, cv::Scalar(b - tolerance, g - tolerance, r - tolerance), cv::Scalar(b + tolerance, g + tolerance, r + tolerance), mask);
+
+        // Kernel for the morphological operations
+        auto kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5));
+
         // Morphological opening (inverse because we have white pixels on black background)
-        cvDilate(mask, mask, kernel, 1);
-        cvErode(mask, mask, kernel, 1);
-        // We go through the mask to look for the tracked object and get its gravity center
-        for(x = 0; x < mask->width; x++) {
-                for(y = 0; y < mask->height; y++) {
-                        // If its a tracked pixel, count it to the center of gravity's calcul
-                        if(((uchar *)(mask->imageData + y*mask->widthStep))[x] == 255) {
-                                sommeX += x;
-                                sommeY += y;
-                                (*nbPixels)++;
-                        }
-                }
+        cv::dilate(mask, mask, kernel, cv::Size(5, 5)); // 1, 1
+        cv::erode(mask, mask, kernel, cv::Size(5, 5)); // 1, 1
+
+        // Get Image Moments
+        cv::Moments m = cv::moments(mask, true);
+        double m10 = m.m10;
+        double m01 = m.m01;
+        double mA = m.m00;
+
+        delete *kernel;
+        delete *mask;
+        delete *bgr;
+
+        if (mA > 1000) {
+                x = m10 / mA;
+                y = m01 / mA;
+                cv::circle(image, cv::Point(x, y), 5, cv::Scalar(0, 0, 255), -1);
         }
-        // Show the result of the mask image
-    cvShowImage("DetectionCnam_Codels Mask", mask);
-    //Image camera
-    cvShowImage("image_camera",image);
-    cvWaitKey(3);
-        // We release the memory of kernels
-        cvReleaseStructuringElement(&kernel);
-        // We release the memory of the mask
-        cvReleaseImage(&mask);
-        // We release the memory of the hsv image
-    cvReleaseImage(&bgr);
-        //return nbPixels;
-    if(*nbPixels > 0) {
-      // gravcenter = ((int)(sommeX / (nbPixels)), (int)(sommeY / (*nbPixels)));
-      coord->x = (int)(sommeX / (*nbPixels));
-      coord->y = (int)(sommeY / (*nbPixels));
-      cvCircle(image,*coord,10,cvScalar(0,0,255,0),2);
-      cvShowImage("image_camera",image);
-      cvWaitKey(3);
-      return true;
-    } else {
-      coord->x = -1;
-      coord->y = -1;
-      return false;
-    }
+        else {
+                x = -1;
+                y = -1;
+                return false;
+        }
+
+        if (debug) {
+                cv::imshow("Image Mask", mask);
+                cv::imshow("Camera Image", image);
+                cv::waitKey(1);
+        }
+
+        return true;
 }
 
+void imageToWorld(double x, double y, double &xw, double &yw, double &zw, double fx, double fy, double cx, double cy, double z) {
+        xw = (x - cx) * z / fx;
+        yw = (y - cy) * z / fy;
+        zw = z;
+
+        // Convert to world coordinates
+}
+
+} // namespace Tracking
 
 
 #endif

@@ -55,15 +55,15 @@ component ColorTracker {
     or::ColorTrack::PlateSequence plates;       // The plates sequence
     or::ColorTrack::ColorInfo color;	        // The color of the object to track
 
-
-    long obj_x, obj_y; 			// Position of the center of the object in the image
     BlobMap blob_map;
     boolean new_findings;	// true when a new findings has been found and can be published.
 
     unsigned short current_index;	// current free index in the plate sequence
 
     or_rigid_body::state tracked_pose;
+    or_rigid_body::state frame_pose;
 
+    boolean debug;
   };
 
   /* ------------- DEFINITION OF PORTS -------------- */
@@ -89,9 +89,17 @@ component ColorTracker {
 
   port out or_rigid_body::state TargetPose;
 
+
+  /* -------------------------- ATTRIBUTES --------------------------- */
+  attribute SetDebug (in debug) {
+    doc "Set the debug mode.";
+  };
+
   /* ------------------ TASK DEFINITION -------------------- */
   task track {
     period 100 ms;
+    doc "Track the object in the image.";
+
     codel <start> FetchPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in Pose)
           yield pause::start, ready;
     codel <ready> InitIDS(port in Frame, port in Intrinsics, port in Extrinsics,
@@ -123,8 +131,8 @@ component ColorTracker {
     doc "Track the plates/objects in the image.";
     after set_color; //Start tracking after setting the color
 
-    codel <start> TrackObject(ids in intrinsics, ids in extrinsics, ids in color, ids out blob_map, ids out new_findings,
-            port out OccupancyGrid, port out TrackedPose)
+    codel <start> TrackObject(ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids inout frame_pose, ids out blob_map, ids out new_findings,
+            port out OccupancyGrid, port out TrackedPose, ids in debug)
             yield pause::start, ether;
     throw e_BAD_IMAGE_PORT, e_BAD_POSE_PORT, e_BAD_OG_PORT, e_BAD_TARGET_PORT, e_OPENCV_ERROR;
     interrupts publish_occupancy_grid;

@@ -2,7 +2,7 @@
 #include "acColorTracker.h"
 #include "fg3utils/trace_f.h"
 #include "fg3utils/macros.h"
-// #include "tracking.hpp"
+#include "tracking.hpp"
 
 #include "ColorTracker_c_types.h"
 
@@ -81,16 +81,67 @@ InitIDS(const ColorTracker_Frame *Frame,
  *        ColorTracker_e_BAD_TARGET_PORT, ColorTracker_e_OPENCV_ERROR.
  */
 genom_event
-TrackObject(const or_sensor_intrinsics *intrinsics,
+TrackObject(const or_sensor_frame *image_frame,
+            const or_sensor_intrinsics *intrinsics,
             const or_sensor_extrinsics *extrinsics,
             const or_ColorTrack_ColorInfo *color,
+            or_rigid_body_state *frame_pose,
             ColorTracker_BlobMap *blob_map, bool *new_findings,
+            const ColorTracker_Frame *Frame,
             const ColorTracker_OccupancyGrid *OccupancyGrid,
-            const ColorTracker_TrackedPose *TrackedPose,
+            const ColorTracker_TrackedPose *TrackedPose, bool debug,
             const genom_context self)
 {
-  /* skeleton sample: insert your code */
-  /* skeleton sample */ return ColorTracker_pause_start;
+  bool is_object_found = false;
+  double image_x=0.0, image_y=0.0;
+  // Convert frame to cv::Mat
+    cv::Mat image;
+    if (image_frame->compressed)
+    {
+        std::vector<uint8_t> buf;
+        buf.assign(image_frame->pixels._buffer, image_frame->pixels._buffer + image_frame->pixels._length);
+        imdecode(buf, cv::IMREAD_GRAYSCALE, &image);
+    }
+    else
+    {
+        int type;
+        if      (image_frame->bpp == 1) type = CV_8UC1;
+        else if (image_frame->bpp == 2) type = CV_16UC1;
+        else if (image_frame->bpp == 3) type = CV_8UC3;
+        else if (image_frame->bpp == 4) type = CV_8UC4;
+        else return ColorTracker_e_BAD_IMAGE_PORT(self);
+
+        image = cv::Mat(
+            cv::Size(image_frame->width, image_frame->height),
+            type,
+            image_frame->pixels._buffer,
+            cv::Mat::AUTO_STEP);
+    }
+  is_object_found = Tracking::detectObject(image, color->b, color->g, color->r, color->threshold, image_x, image_y);
+
+  if (is_object_found) {
+    // Convert image coordinates to world coordinates
+    double world_x, world_y, world_z;
+    auto fx = intrinsics->fx;
+    auto fy = intrinsics->fy;
+    auto cx = intrinsics->cx;
+    auto cy = intrinsics->cy;
+    auto z = 3.0; // TODO: get from camera info
+    Tracking::imageToWorld(image_x, image_y, world_x, world_y, world_z, fx, fy, cx, cy, z);
+
+    // Tracked Pose
+    TrackedPose->x = world_x;
+    TrackedPose->data->y = world_y;
+    TrackedPose->data->z = world_z;
+    TrackedPose->data->roll = 0.0;
+    TrackedPose->data->pitch = 0.0;
+    TrackedPose->data->yaw = 0.0;
+    *new_findings = true;
+  }
+  else {
+    *new_findings = false;
+  }
+  return ColorTracker_pause_start;
 }
 
 
