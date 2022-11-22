@@ -326,6 +326,29 @@ Set the debug mode.
 
 '''
 
+[[set_calib]]
+=== set_calib (activity)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Throws
+[disc]
+ * `exception ::ColorTracker::e_OUT_OF_MEM`
+
+ * `exception ::ColorTracker::e_BAD_IMAGE_PORT`
+
+a|.Context
+[disc]
+  * In task `<<track>>`
+  (frequency 10.0 _Hz_)
+  * Reads port `<<Intrinsics>>`
+  * Reads port `<<Extrinsics>>`
+|===
+
+Read calibration from input ports and update internal matrices.
+
+'''
+
 [[set_color]]
 === set_color (function)
 

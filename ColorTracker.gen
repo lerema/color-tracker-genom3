@@ -26,7 +26,8 @@
 
 #include "ColorTrack.idl"
 #include "Environment.idl"
-
+#include "or/sensor/camera.gen"
+#include "or/sensor/pixel.idl"
 
 /* -------------------------- MODULE DECLARATION --------------------------- */
 component ColorTracker {
@@ -47,6 +48,8 @@ component ColorTracker {
     short index;
   };
 
+  native calib;
+
   /* -------------------------- IDS --------------------------- */
   ids {
     or::sensor::intrinsics intrinsics;	        // Camera intrinsics
@@ -62,6 +65,8 @@ component ColorTracker {
 
     or_rigid_body::state tracked_pose;
     or_rigid_body::state frame_pose;
+
+    calib CameraCalibration;
 
     boolean debug;
   };
@@ -102,7 +107,7 @@ component ColorTracker {
 
     codel <start> FetchPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in Pose)
           yield pause::start, ready;
-    codel <ready> InitIDS(port in Frame, port in Intrinsics, port in Extrinsics,
+    codel <ready> InitIDS(port in Frame, ids inout CameraCalibration, port in Intrinsics, port in Extrinsics,
           ids out image_frame, ids out intrinsics, ids out extrinsics, ids out tracked_pose, ids out blob_map)
           yield ether;
     throw e_OUT_OF_MEM, e_BAD_IMAGE_PORT;
@@ -131,7 +136,7 @@ component ColorTracker {
     doc "Track the plates/objects in the image.";
     after set_color; //Start tracking after setting the color
 
-    codel <start> TrackObject(ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids inout frame_pose, ids out blob_map, ids out new_findings,
+    codel <start> TrackObject(ids in image_frame, ids in CameraCalibration, ids in color, ids inout frame_pose, ids out blob_map, ids out new_findings,
             port out OccupancyGrid, port out TrackedPose, ids in debug)
             yield pause::start, ether;
     throw e_BAD_IMAGE_PORT, e_BAD_POSE_PORT, e_BAD_OG_PORT, e_BAD_TARGET_PORT, e_OPENCV_ERROR;

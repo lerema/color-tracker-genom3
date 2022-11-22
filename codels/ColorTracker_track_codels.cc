@@ -5,7 +5,55 @@
 #include "tracking.hpp"
 
 #include "ColorTracker_c_types.h"
+#include <math.h>
+#include <opencv2/opencv.hpp>
+#include <eigen3/Eigen/Dense>
+#include <opencv2/core/eigen.hpp>
 
+
+/* --- Calibration ------------------------------------------------------ */
+struct ColorTracker_calib {
+    Eigen::Matrix3d K = Eigen::Matrix3d::Zero();              // intrinsic calibration matrix
+    cv::Mat K_cv = cv::Mat::zeros(cv::Size(3,3), CV_32F);   // opencv representation of K
+    cv::Mat D = cv::Mat::zeros(cv::Size(1,5), CV_32F);      // camera distortion coefs
+    Eigen::Vector3d B_p_C = Eigen::Vector3d::Zero();          // translation from camera to body
+    Eigen::Matrix3d B_R_C = Eigen::Matrix3d::Identity();      // rotation from body to camera
+};
+
+/* --- Helper func ------------------------------------------------------ */
+void UpdateCalibrationParameters(const ColorTracker_Intrinsics *intrinsics,
+                  const ColorTracker_Extrinsics *extrinsics,
+                  ColorTracker_calib **calib, const genom_context self)
+{
+    // Init intr
+    or_sensor_calibration* c = &(intrinsics->data(self)->calib);
+    (*calib)->K_cv = (cv::Mat_<float>(3,3) <<
+        c->fx, c->gamma, c->cx,
+            0,    c->fy, c->cy,
+            0,        0,     1
+    );
+    cv::cv2eigen((*calib)->K_cv, (*calib)->K);
+    (*calib)->D = (cv::Mat_<float>(5,1) <<
+        intrinsics->data(self)->disto.k1,
+        intrinsics->data(self)->disto.k2,
+        intrinsics->data(self)->disto.k3,
+        intrinsics->data(self)->disto.p1,
+        intrinsics->data(self)->disto.p2
+    );
+
+    // Init extr
+    (*calib)->B_p_C <<
+        extrinsics->data(self)->trans.tx,
+        extrinsics->data(self)->trans.ty,
+        extrinsics->data(self)->trans.tz;
+    float r = extrinsics->data(self)->rot.roll;
+    float p = extrinsics->data(self)->rot.pitch;
+    float y = extrinsics->data(self)->rot.yaw;
+    (*calib)->B_R_C <<
+        cos(p)*cos(y), sin(r)*sin(p)*cos(y) - cos(r)*sin(y), cos(r)*sin(p)*cos(y) + sin(r)*sin(y),
+        cos(p)*sin(y), sin(r)*sin(p)*sin(y) + cos(r)*cos(y), cos(r)*sin(p)*sin(y) - sin(r)*cos(y),
+              -sin(p),                        sin(r)*cos(p),                        cos(r)*cos(p);
+}
 
 /* --- Task track ------------------------------------------------------- */
 
@@ -54,6 +102,7 @@ FetchPorts(const ColorTracker_Frame *Frame,
  */
 genom_event
 InitIDS(const ColorTracker_Frame *Frame,
+        ColorTracker_calib **CameraCalibration,
         const ColorTracker_Intrinsics *Intrinsics,
         const ColorTracker_Extrinsics *Extrinsics,
         or_sensor_frame *image_frame, or_sensor_intrinsics *intrinsics,
@@ -66,9 +115,10 @@ InitIDS(const ColorTracker_Frame *Frame,
   *intrinsics = *Intrinsics->data(self);
   *extrinsics = *Extrinsics->data(self);
 
+  UpdateCalibrationParameters(Intrinsics, Extrinsics, CameraCalibration, self);
+
   return ColorTracker_ether;
 }
-
 
 /* --- Activity track_object -------------------------------------------- */
 
@@ -82,8 +132,7 @@ InitIDS(const ColorTracker_Frame *Frame,
  */
 genom_event
 TrackObject(const or_sensor_frame *image_frame,
-            const or_sensor_intrinsics *intrinsics,
-            const or_sensor_extrinsics *extrinsics,
+            const ColorTracker_calib *CameraCalibration,
             const or_ColorTrack_ColorInfo *color,
             or_rigid_body_state *frame_pose,
             ColorTracker_BlobMap *blob_map, bool *new_findings,
@@ -122,25 +171,22 @@ TrackObject(const or_sensor_frame *image_frame,
   if (is_object_found) {
     // Convert image coordinates to world coordinates
     double world_x, world_y, world_z;
-    auto fx = intrinsics->fx;
-    auto fy = intrinsics->fy;
-    auto cx = intrinsics->cx;
-    auto cy = intrinsics->cy;
+
     auto z = 3.0; // TODO: get from camera info
-    Tracking::imageToWorld(image_x, image_y, world_x, world_y, world_z, fx, fy, cx, cy, z);
+    // Tracking::imageToWorld(image_x, image_y, world_x, world_y, world_z, fx, fy, cx, cy, z);
 
     // Tracked Pose
-    TrackedPose->x = world_x;
-    TrackedPose->data->y = world_y;
-    TrackedPose->data->z = world_z;
-    TrackedPose->data->roll = 0.0;
-    TrackedPose->data->pitch = 0.0;
-    TrackedPose->data->yaw = 0.0;
+    // TrackedPose->pos.x = world_x;
+    // TrackedPose->data->y = world_y;
+    // TrackedPose->data->z = world_z;
     *new_findings = true;
   }
   else {
     *new_findings = false;
   }
+
+  image.release();
+
   return ColorTracker_pause_start;
 }
 
