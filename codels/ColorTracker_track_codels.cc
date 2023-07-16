@@ -122,20 +122,19 @@ TrackObject(const or_sensor_frame *image_frame,
   if (is_object_found) {
     // Convert image coordinates to world coordinates
     double world_x, world_y, world_z;
-    auto fx = intrinsics->fx;
-    auto fy = intrinsics->fy;
-    auto cx = intrinsics->cx;
-    auto cy = intrinsics->cy;
+    auto fx = intrinsics->calib.fx;
+    auto fy = intrinsics->calib.fy;
+    auto cx = intrinsics->calib.cx;
+    auto cy = intrinsics->calib.cy;
     auto z = 3.0; // TODO: get from camera info
     Tracking::imageToWorld(image_x, image_y, world_x, world_y, world_z, fx, fy, cx, cy, z);
 
     // Tracked Pose
-    TrackedPose->x = world_x;
-    TrackedPose->data->y = world_y;
-    TrackedPose->data->z = world_z;
-    TrackedPose->data->roll = 0.0;
-    TrackedPose->data->pitch = 0.0;
-    TrackedPose->data->yaw = 0.0;
+    // TODO: Update the constant for the data
+    const char *id = "1";
+    TrackedPose->data(id, self)->pos._value.x = world_x;
+    TrackedPose->data(id, self)->pos._value.y = world_y;
+    TrackedPose->data(id, self)->pos._value.z = world_z;
     *new_findings = true;
   }
   else {

@@ -29,9 +29,9 @@ namespace Tracking
 bool detectObject(cv::Mat &image, int b, int g, int r, int tolerance, double &x, double &y, bool debug=false) {
 
         // Create the mask &initialize it to white (no color detected)
-        auto mask = cv::Mat(image->size(), image->type());
+        auto mask = cv::Mat(image.size(), image.type());
         // Create the thresholded image
-        auto bgr = image->clone();
+        auto bgr = image.clone();
 
         // We create the mask
         cv::inRange(bgr, cv::Scalar(b - tolerance, g - tolerance, r - tolerance), cv::Scalar(b + tolerance, g + tolerance, r + tolerance), mask);
@@ -49,9 +49,9 @@ bool detectObject(cv::Mat &image, int b, int g, int r, int tolerance, double &x,
         double m01 = m.m01;
         double mA = m.m00;
 
-        delete *kernel;
-        delete *mask;
-        delete *bgr;
+        // delete *kernel;
+        // delete *mask;
+        // delete bgr;
 
         if (mA > 1000) {
                 x = m10 / mA;
