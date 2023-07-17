@@ -6,9 +6,7 @@
 
 #include "ColorTracker_c_types.h"
 
-
 /* --- Task track ------------------------------------------------------- */
-
 
 /** Codel FetchPorts of task track.
  *
@@ -23,28 +21,23 @@ FetchPorts(const ColorTracker_Frame *Frame,
            const ColorTracker_Pose *Pose, const genom_context self)
 {
   // Check if all ports are connected and available
-  if (Frame->read(self) != genom_ok && Frame->data(self))
+  if (check_port_in_p(Frame))
   {
-    CODEL_LOG_WARNING("Failed to read raw image frame");
+    CODEL_LOG_WARNING("Image port not connected");
     return ColorTracker_pause_start;
   }
-  if (Intrinsics->read(self) != genom_ok && Intrinsics->data(self))
+  if (check_port_in_p(Intrinsics))
   {
-    CODEL_LOG_WARNING("Failed to read camera intrinsics");
+    CODEL_LOG_WARNING("Intrinsics port not connected");
     return ColorTracker_pause_start;
   }
-  if (Extrinsics->read(self) != genom_ok && Extrinsics->data(self))
-  {  CODEL_LOG_WARNING("Failed to read camera extrinsics");
-    return ColorTracker_pause_start;
-  }
-  if (Pose->read(self) != genom_ok && Pose->data(self))
+  if (check_port_in_p(Extrinsics))
   {
-    CODEL_LOG_WARNING("Failed to read robot pose");
+    CODEL_LOG_WARNING("Extrinsics port not connected");
     return ColorTracker_pause_start;
   }
   return ColorTracker_ready;
 }
-
 
 /** Codel InitIDS of task track.
  *
@@ -61,14 +54,22 @@ InitIDS(const ColorTracker_Frame *Frame,
         or_rigid_body_state *tracked_pose,
         ColorTracker_BlobMap *blob_map, const genom_context self)
 {
+  or_sensor_frame *FrameData;
+  or_sensor_intrinsics *IntrinsicsData;
+  or_sensor_extrinsics *ExtrinsicsData;
+
   // Read ports
-  *image_frame = *Frame->data(self);
-  *intrinsics = *Intrinsics->data(self);
-  *extrinsics = *Extrinsics->data(self);
+  bind_port_in(Frame, ColorTracker_e_BAD_IMAGE_PORT);
+  bind_port_in(Intrinsics, ColorTracker_e_BAD_POSE_PORT);
+  bind_port_in(Extrinsics, ColorTracker_e_BAD_OG_PORT);
+
+  // Copy data
+  image_frame = FrameData;
+  intrinsics = IntrinsicsData;
+  extrinsics = ExtrinsicsData;
 
   return ColorTracker_ether;
 }
-
 
 /* --- Activity track_object -------------------------------------------- */
 
@@ -87,39 +88,44 @@ TrackObject(const or_sensor_frame *image_frame,
             const or_ColorTrack_ColorInfo *color,
             or_rigid_body_state *frame_pose,
             ColorTracker_BlobMap *blob_map, bool *new_findings,
-            const ColorTracker_Frame *Frame,
             const ColorTracker_OccupancyGrid *OccupancyGrid,
             const ColorTracker_TrackedPose *TrackedPose, bool debug,
             const genom_context self)
 {
   bool is_object_found = false;
-  double image_x=0.0, image_y=0.0;
+  double image_x = 0.0, image_y = 0.0;
   // Convert frame to cv::Mat
-    cv::Mat image;
-    if (image_frame->compressed)
-    {
-        std::vector<uint8_t> buf;
-        buf.assign(image_frame->pixels._buffer, image_frame->pixels._buffer + image_frame->pixels._length);
-        imdecode(buf, cv::IMREAD_GRAYSCALE, &image);
-    }
+  cv::Mat image;
+  if (image_frame->compressed)
+  {
+    std::vector<uint8_t> buf;
+    buf.assign(image_frame->pixels._buffer, image_frame->pixels._buffer + image_frame->pixels._length);
+    imdecode(buf, cv::IMREAD_GRAYSCALE, &image);
+  }
+  else
+  {
+    int type;
+    if (image_frame->bpp == 1)
+      type = CV_8UC1;
+    else if (image_frame->bpp == 2)
+      type = CV_16UC1;
+    else if (image_frame->bpp == 3)
+      type = CV_8UC3;
+    else if (image_frame->bpp == 4)
+      type = CV_8UC4;
     else
-    {
-        int type;
-        if      (image_frame->bpp == 1) type = CV_8UC1;
-        else if (image_frame->bpp == 2) type = CV_16UC1;
-        else if (image_frame->bpp == 3) type = CV_8UC3;
-        else if (image_frame->bpp == 4) type = CV_8UC4;
-        else return ColorTracker_e_BAD_IMAGE_PORT(self);
+      return ColorTracker_e_BAD_IMAGE_PORT(self);
 
-        image = cv::Mat(
-            cv::Size(image_frame->width, image_frame->height),
-            type,
-            image_frame->pixels._buffer,
-            cv::Mat::AUTO_STEP);
-    }
+    image = cv::Mat(
+        cv::Size(image_frame->width, image_frame->height),
+        type,
+        image_frame->pixels._buffer,
+        cv::Mat::AUTO_STEP);
+  }
   is_object_found = Tracking::detectObject(image, color->b, color->g, color->r, color->threshold, image_x, image_y);
 
-  if (is_object_found) {
+  if (is_object_found)
+  {
     // Convert image coordinates to world coordinates
     double world_x, world_y, world_z;
     auto fx = intrinsics->calib.fx;
@@ -137,12 +143,12 @@ TrackObject(const or_sensor_frame *image_frame,
     TrackedPose->data(id, self)->pos._value.z = world_z;
     *new_findings = true;
   }
-  else {
+  else
+  {
     *new_findings = false;
   }
   return ColorTracker_pause_start;
 }
-
 
 /* --- Activity publish_occupancy_grid ---------------------------------- */
 
