@@ -35,10 +35,15 @@ component ColorTracker {
   lang	  "c";
   doc 	  "A GenoM module for the ColorTracker using a monocular camera.";
 
-  codels-require "opencv4, felix-g3utils, eigen3";
+  codels-require "opencv4, felix-g3utils, eigen3, vision-idl";
   uses		or_pose_estimator;
 
-  exception e_BAD_IMAGE_PORT, e_BAD_POSE_PORT, e_BAD_OG_PORT, e_BAD_TARGET_PORT, e_OPENCV_ERROR, e_OUT_OF_MEM;
+  exception e_BAD_IMAGE_PORT { short code; string<128> message; };
+  exception e_BAD_POSE_PORT { short code; string<128> message; };
+  exception e_BAD_OG_PORT { short code; string<128> message; };
+  exception e_BAD_TARGET_PORT { short code; string<128> message; };
+  exception e_OPENCV_ERROR { short code; string<128> message; };
+  exception e_OUT_OF_MEM { short code; string<128> message; };
 
 
   struct BlobMap {
@@ -97,14 +102,19 @@ component ColorTracker {
 
   /* ------------------ TASK DEFINITION -------------------- */
   task track {
-    period 100 ms;
+    // period 100 ms;
     doc "Track the object in the image.";
 
     codel <start> FetchPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in Pose)
           yield pause::start, ready;
     codel <ready> InitIDS(port in Frame, port in Intrinsics, port in Extrinsics,
           ids out image_frame, ids out intrinsics, ids out extrinsics, ids out tracked_pose, ids out blob_map)
-          yield ether;
+          yield pause::ready, main, ether;
+    codel <main> TrackObject(ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids inout tracked_pose, ids out blob_map, ids out new_findings,
+          port out OccupancyGrid, port out TrackedPose, ids in debug)
+          yield pause::main, publish, ether;
+    codel <publish> PublishOG(ids in blob_map, port out OccupancyGrid)
+          yield main, ether;
     throw e_OUT_OF_MEM, e_BAD_IMAGE_PORT;
   };
 
@@ -124,29 +134,5 @@ component ColorTracker {
     doc "Set the size of the map.";
     codel SetMapSize(local in map_width, local in map_height, ids out blob_map);
     throw e_BAD_OG_PORT;
-  };
-
-  /* ------------------ SERVICE DEFINITION: Events -------------------- */
-  activity track_object () {
-    doc "Track the plates/objects in the image.";
-    after set_color; //Start tracking after setting the color
-
-    codel <start> TrackObject(ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids inout frame_pose, ids out blob_map, ids out new_findings,
-            port out OccupancyGrid, port out TrackedPose, ids in debug)
-            yield pause::start, ether;
-    throw e_BAD_IMAGE_PORT, e_BAD_POSE_PORT, e_BAD_OG_PORT, e_BAD_TARGET_PORT, e_OPENCV_ERROR;
-    interrupts publish_occupancy_grid;
-    task track;
-  };
-
-  activity publish_occupancy_grid () {
-    doc "Publish the occupancy grid map.";
-    after set_map_size; //Start publishing after setting the map size
-
-    codel <start> PublishOG(ids in blob_map, port out OccupancyGrid)
-            yield pause::start, ether;
-    throw e_BAD_OG_PORT, e_OPENCV_ERROR;
-    interrupts track_object;
-    task track;
   };
 };

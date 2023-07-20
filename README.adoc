@@ -342,6 +342,8 @@ a|.Inputs
 a|.Throws
 [disc]
  * `exception ::ColorTracker::e_OPENCV_ERROR`
+ ** `short` `code`
+ ** `string<128>` `message`
 
 |===
 
@@ -363,6 +365,8 @@ a|.Inputs
 a|.Throws
 [disc]
  * `exception ::ColorTracker::e_BAD_OG_PORT`
+ ** `short` `code`
+ ** `string<128>` `message`
 
 |===
 
@@ -489,7 +493,7 @@ Collect images from camera port.
 |===
 a|.Context
 [disc]
-  * Frequency 10.0 _Hz_
+  * Free running
 * Reads port `<<Pose>>`
 * Reads port `<<Frame>>`
 * Reads port `<<Intrinsics>>`
@@ -499,8 +503,12 @@ a|.Context
 a|.Throws
 [disc]
  * `exception ::ColorTracker::e_OUT_OF_MEM`
+ ** `short` `code`
+ ** `string<128>` `message`
 
  * `exception ::ColorTracker::e_BAD_IMAGE_PORT`
+ ** `short` `code`
+ ** `string<128>` `message`
 
 |===
 

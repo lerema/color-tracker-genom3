@@ -3,6 +3,7 @@
 #include "fg3utils/trace_f.h"
 #include "fg3utils/macros.h"
 #include "tracking.hpp"
+#include <cstdio>
 
 #include "ColorTracker_c_types.h"
 
@@ -11,7 +12,7 @@
 /** Codel FetchPorts of task track.
  *
  * Triggered by ColorTracker_start.
- * Yields to ColorTracker_pause_start, ColorTracker_ready.
+ * Yields to ColorTracker_start, ColorTracker_ready.
  * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT.
  */
 genom_event
@@ -24,17 +25,17 @@ FetchPorts(const ColorTracker_Frame *Frame,
   if (check_port_in_p(Frame))
   {
     CODEL_LOG_WARNING("Image port not connected");
-    return ColorTracker_pause_start;
+    return ColorTracker_start;
   }
   if (check_port_in_p(Intrinsics))
   {
     CODEL_LOG_WARNING("Intrinsics port not connected");
-    return ColorTracker_pause_start;
+    return ColorTracker_start;
   }
   if (check_port_in_p(Extrinsics))
   {
     CODEL_LOG_WARNING("Extrinsics port not connected");
-    return ColorTracker_pause_start;
+    return ColorTracker_start;
   }
   return ColorTracker_ready;
 }
@@ -42,7 +43,7 @@ FetchPorts(const ColorTracker_Frame *Frame,
 /** Codel InitIDS of task track.
  *
  * Triggered by ColorTracker_ready.
- * Yields to ColorTracker_ether.
+ * Yields to ColorTracker_main, ColorTracker_ether.
  * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT.
  */
 genom_event
@@ -59,34 +60,72 @@ InitIDS(const ColorTracker_Frame *Frame,
   or_sensor_extrinsics *ExtrinsicsData;
 
   // Read ports
-  bind_port_in(Frame, ColorTracker_e_BAD_IMAGE_PORT);
-  bind_port_in(Intrinsics, ColorTracker_e_BAD_POSE_PORT);
-  bind_port_in(Extrinsics, ColorTracker_e_BAD_OG_PORT);
+  if (Frame->read(self) == genom_ok && Frame->data(self))
+    FrameData = Frame->data(self);
+  else
+  {
+    ColorTracker_e_BAD_IMAGE_PORT_detail msg;
+    snprintf(msg.message, sizeof(msg.message), "%s", "Failed to read image port");
+    return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
+  }
+  if (Intrinsics->read(self) == genom_ok && Intrinsics->data(self))
+    IntrinsicsData = Intrinsics->data(self);
+  else
+  {
+    ColorTracker_e_BAD_IMAGE_PORT_detail msg;
+    snprintf(msg.message, sizeof(msg.message), "%s", "Failed to read intrinsics port");
+    return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
+  }
+  if (Extrinsics->read(self) == genom_ok && Extrinsics->data(self))
+    ExtrinsicsData = Extrinsics->data(self);
+  else
+  {
+    ColorTracker_e_BAD_IMAGE_PORT_detail msg;
+    snprintf(msg.message, sizeof(msg.message), "%s", "Failed to read extrinsics port");
+    return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
+  }
 
   // Copy data
-  image_frame = FrameData;
-  intrinsics = IntrinsicsData;
-  extrinsics = ExtrinsicsData;
+  *image_frame = *FrameData;
+  *intrinsics = *IntrinsicsData;
+  *extrinsics = *ExtrinsicsData;
 
-  return ColorTracker_ether;
+  // Initialize tracked pose
+  tracked_pose->pos._value.x = 0.0;
+  tracked_pose->pos._value.y = 0.0;
+  tracked_pose->pos._value.z = 0.0;
+
+  // Initialize blob map
+  blob_map->is_blobbed = false;
+  blob_map->grid_map.origin_x = 0.0;
+  blob_map->grid_map.origin_y = 0.0;
+  blob_map->grid_map.width = 10.0;
+  blob_map->grid_map.height = 10.0;
+  blob_map->grid_map.resolution = 0.1;
+  for (int i = 0; i < blob_map->grid_map.width / blob_map->grid_map.resolution; i++)
+  {
+    for (int j = 0; j < blob_map->grid_map.height / blob_map->grid_map.resolution; j++)
+    {
+      blob_map->grid_map.data[i][j] = 0;
+    }
+  }
+  blob_map->index = 0;
+
+  return ColorTracker_main;
 }
 
-/* --- Activity track_object -------------------------------------------- */
-
-/** Codel TrackObject of activity track_object.
+/** Codel TrackObject of task track.
  *
- * Triggered by ColorTracker_start.
- * Yields to ColorTracker_pause_start, ColorTracker_ether.
- * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT,
- *        ColorTracker_e_BAD_POSE_PORT, ColorTracker_e_BAD_OG_PORT,
- *        ColorTracker_e_BAD_TARGET_PORT, ColorTracker_e_OPENCV_ERROR.
+ * Triggered by ColorTracker_main.
+ * Yields to ColorTracker_publish, ColorTracker_ether.
+ * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT.
  */
 genom_event
 TrackObject(const or_sensor_frame *image_frame,
             const or_sensor_intrinsics *intrinsics,
             const or_sensor_extrinsics *extrinsics,
             const or_ColorTrack_ColorInfo *color,
-            or_rigid_body_state *frame_pose,
+            or_rigid_body_state *tracked_pose,
             ColorTracker_BlobMap *blob_map, bool *new_findings,
             const ColorTracker_OccupancyGrid *OccupancyGrid,
             const ColorTracker_TrackedPose *TrackedPose, bool debug,
@@ -114,7 +153,11 @@ TrackObject(const or_sensor_frame *image_frame,
     else if (image_frame->bpp == 4)
       type = CV_8UC4;
     else
-      return ColorTracker_e_BAD_IMAGE_PORT(self);
+    {
+      ColorTracker_e_BAD_IMAGE_PORT_detail *msg;
+      snprintf(msg->message, sizeof(msg->message), "%s", "Invalid image bpp");
+      return ColorTracker_e_BAD_IMAGE_PORT(msg, self);
+    }
 
     image = cv::Mat(
         cv::Size(image_frame->width, image_frame->height),
@@ -146,18 +189,16 @@ TrackObject(const or_sensor_frame *image_frame,
   else
   {
     *new_findings = false;
+    return ColorTracker_ether;
   }
-  return ColorTracker_pause_start;
+  return ColorTracker_publish;
 }
 
-/* --- Activity publish_occupancy_grid ---------------------------------- */
-
-/** Codel PublishOG of activity publish_occupancy_grid.
+/** Codel PublishOG of task track.
  *
- * Triggered by ColorTracker_start.
- * Yields to ColorTracker_pause_start, ColorTracker_ether.
- * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT,
- *        ColorTracker_e_BAD_OG_PORT, ColorTracker_e_OPENCV_ERROR.
+ * Triggered by ColorTracker_publish.
+ * Yields to ColorTracker_main, ColorTracker_ether.
+ * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT.
  */
 genom_event
 PublishOG(const ColorTracker_BlobMap *blob_map,
@@ -165,5 +206,5 @@ PublishOG(const ColorTracker_BlobMap *blob_map,
           const genom_context self)
 {
   /* skeleton sample: insert your code */
-  /* skeleton sample */ return ColorTracker_pause_start;
+  /* skeleton sample */ return ColorTracker_main;
 }
