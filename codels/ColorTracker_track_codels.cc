@@ -12,7 +12,7 @@
 /** Codel FetchPorts of task track.
  *
  * Triggered by ColorTracker_start.
- * Yields to ColorTracker_start, ColorTracker_ready.
+ * Yields to ColorTracker_pause_start, ColorTracker_ready.
  * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT.
  */
 genom_event
@@ -25,17 +25,17 @@ FetchPorts(const ColorTracker_Frame *Frame,
   if (check_port_in_p(Frame))
   {
     CODEL_LOG_WARNING("Image port not connected");
-    return ColorTracker_start;
+    return ColorTracker_pause_start;
   }
   if (check_port_in_p(Intrinsics))
   {
     CODEL_LOG_WARNING("Intrinsics port not connected");
-    return ColorTracker_start;
+    return ColorTracker_pause_start;
   }
   if (check_port_in_p(Extrinsics))
   {
     CODEL_LOG_WARNING("Extrinsics port not connected");
-    return ColorTracker_start;
+    return ColorTracker_pause_start;
   }
   return ColorTracker_ready;
 }
@@ -43,7 +43,8 @@ FetchPorts(const ColorTracker_Frame *Frame,
 /** Codel InitIDS of task track.
  *
  * Triggered by ColorTracker_ready.
- * Yields to ColorTracker_main, ColorTracker_ether.
+ * Yields to ColorTracker_pause_ready, ColorTracker_main,
+ *           ColorTracker_ether.
  * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT.
  */
 genom_event
@@ -65,8 +66,10 @@ InitIDS(const ColorTracker_Frame *Frame,
   else
   {
     ColorTracker_e_BAD_IMAGE_PORT_detail msg;
-    snprintf(msg.message, sizeof(msg.message), "%s", "Failed to read image port");
-    return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
+    snprintf(msg.message, sizeof(msg.message), "%s", "Failed to read image port. waiting");
+    // return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
+    warnx("%s", msg.message);
+    return ColorTracker_pause_ready;
   }
   if (Intrinsics->read(self) == genom_ok && Intrinsics->data(self))
     IntrinsicsData = Intrinsics->data(self);
@@ -74,7 +77,9 @@ InitIDS(const ColorTracker_Frame *Frame,
   {
     ColorTracker_e_BAD_IMAGE_PORT_detail msg;
     snprintf(msg.message, sizeof(msg.message), "%s", "Failed to read intrinsics port");
-    return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
+    // return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
+    warnx("%s", msg.message);
+    return ColorTracker_pause_ready;
   }
   if (Extrinsics->read(self) == genom_ok && Extrinsics->data(self))
     ExtrinsicsData = Extrinsics->data(self);
@@ -82,7 +87,9 @@ InitIDS(const ColorTracker_Frame *Frame,
   {
     ColorTracker_e_BAD_IMAGE_PORT_detail msg;
     snprintf(msg.message, sizeof(msg.message), "%s", "Failed to read extrinsics port");
-    return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
+    warnx("%s", msg.message);
+    // return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
+    return ColorTracker_pause_ready;
   }
 
   // Copy data
@@ -117,7 +124,8 @@ InitIDS(const ColorTracker_Frame *Frame,
 /** Codel TrackObject of task track.
  *
  * Triggered by ColorTracker_main.
- * Yields to ColorTracker_publish, ColorTracker_ether.
+ * Yields to ColorTracker_pause_main, ColorTracker_publish,
+ *           ColorTracker_ether.
  * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT.
  */
 genom_event
@@ -189,7 +197,7 @@ TrackObject(const or_sensor_frame *image_frame,
   else
   {
     *new_findings = false;
-    return ColorTracker_ether;
+    return ColorTracker_pause_main;
   }
   return ColorTracker_publish;
 }
