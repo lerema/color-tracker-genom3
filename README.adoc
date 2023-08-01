@@ -336,10 +336,10 @@ Set the debug mode.
 a|.Inputs
 [disc]
  * `struct ::or::ColorTrack::ColorInfo` `color_info`: Color to be detected
- ** `octet` `r`
- ** `octet` `g`
- ** `octet` `b`
- ** `octet` `threshold`
+ ** `long` `r`
+ ** `long` `g`
+ ** `long` `b`
+ ** `long` `threshold`
 
 a|.Throws
 [disc]

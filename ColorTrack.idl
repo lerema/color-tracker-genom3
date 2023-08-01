@@ -21,10 +21,10 @@ module ColorTrack {
 
   // Color Information for blob detection
   struct ColorInfo {
-    octet r;
-    octet g;
-    octet b;
-    octet threshold;
+    long r;
+    long g;
+    long b;
+    long threshold;
   };
 
 };
