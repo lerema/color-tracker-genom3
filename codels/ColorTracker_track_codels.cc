@@ -68,7 +68,7 @@ InitIDS(const ColorTracker_Frame *Frame,
     ColorTracker_e_BAD_IMAGE_PORT_detail msg;
     snprintf(msg.message, sizeof(msg.message), "%s", "Failed to read image port. waiting");
     // return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
-    warnx("%s", msg.message);
+    //  warnx("%s", msg.message);
     return ColorTracker_pause_ready;
   }
   if (Intrinsics->read(self) == genom_ok && Intrinsics->data(self))
@@ -78,7 +78,7 @@ InitIDS(const ColorTracker_Frame *Frame,
     ColorTracker_e_BAD_IMAGE_PORT_detail msg;
     snprintf(msg.message, sizeof(msg.message), "%s", "Failed to read intrinsics port");
     // return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
-    warnx("%s", msg.message);
+    // warnx("%s", msg.message);
     return ColorTracker_pause_ready;
   }
   if (Extrinsics->read(self) == genom_ok && Extrinsics->data(self))
@@ -87,7 +87,7 @@ InitIDS(const ColorTracker_Frame *Frame,
   {
     ColorTracker_e_BAD_IMAGE_PORT_detail msg;
     snprintf(msg.message, sizeof(msg.message), "%s", "Failed to read extrinsics port");
-    warnx("%s", msg.message);
+    // warnx("%s", msg.message);
     // return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
     return ColorTracker_pause_ready;
   }
@@ -109,13 +109,13 @@ InitIDS(const ColorTracker_Frame *Frame,
   blob_map->grid_map.width = 10.0;
   blob_map->grid_map.height = 10.0;
   blob_map->grid_map.resolution = 0.1;
-  for (int i = 0; i < blob_map->grid_map.width / blob_map->grid_map.resolution; i++)
-  {
-    for (int j = 0; j < blob_map->grid_map.height / blob_map->grid_map.resolution; j++)
-    {
-      blob_map->grid_map.data[i][j] = 0;
-    }
-  }
+  // for (int i = 0; i < blob_map->grid_map.width / blob_map->grid_map.resolution; i++)
+  // {
+  //   for (int j = 0; j < blob_map->grid_map.height / blob_map->grid_map.resolution; j++)
+  //   {
+  //     blob_map->grid_map.data[i][j] = 0;
+  //   }
+  // }
   blob_map->index = 0;
 
   return ColorTracker_main;
