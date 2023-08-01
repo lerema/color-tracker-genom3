@@ -19,7 +19,8 @@ genom_event
 FetchPorts(const ColorTracker_Frame *Frame,
            const ColorTracker_Intrinsics *Intrinsics,
            const ColorTracker_Extrinsics *Extrinsics,
-           const ColorTracker_Pose *Pose, const genom_context self)
+           const ColorTracker_DronePose *DronePose,
+           const genom_context self)
 {
   // Check if all ports are connected and available
   if (check_port_in_p(Frame))
@@ -37,6 +38,11 @@ FetchPorts(const ColorTracker_Frame *Frame,
     CODEL_LOG_WARNING("Extrinsics port not connected");
     return ColorTracker_pause_start;
   }
+  if (check_port_in_p(DronePose))
+  {
+    CODEL_LOG_WARNING("Drone Pose port not connected");
+    return ColorTracker_pause_start;
+  }
   return ColorTracker_ready;
 }
 
@@ -51,9 +57,11 @@ genom_event
 InitIDS(const ColorTracker_Frame *Frame,
         const ColorTracker_Intrinsics *Intrinsics,
         const ColorTracker_Extrinsics *Extrinsics,
+        const ColorTracker_DronePose *DronePose,
         or_sensor_frame *image_frame, or_sensor_intrinsics *intrinsics,
         or_sensor_extrinsics *extrinsics,
-        or_rigid_body_state *tracked_pose,
+        or_pose_estimator_state *frame_pose,
+        or_pose_estimator_state *tracked_pose,
         ColorTracker_BlobMap *blob_map, const genom_context self)
 {
   or_sensor_frame *FrameData;
@@ -87,6 +95,16 @@ InitIDS(const ColorTracker_Frame *Frame,
   {
     ColorTracker_e_BAD_IMAGE_PORT_detail msg;
     snprintf(msg.message, sizeof(msg.message), "%s", "Failed to read extrinsics port");
+    // warnx("%s", msg.message);
+    // return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
+    return ColorTracker_pause_ready;
+  }
+  if (DronePose->read(self) == genom_ok && DronePose->data(self))
+    frame_pose = DronePose->data(self);
+  else
+  {
+    ColorTracker_e_BAD_IMAGE_PORT_detail msg;
+    snprintf(msg.message, sizeof(msg.message), "%s", "Failed to read pose port");
     // warnx("%s", msg.message);
     // return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
     return ColorTracker_pause_ready;
@@ -133,7 +151,8 @@ TrackObject(const or_sensor_frame *image_frame,
             const or_sensor_intrinsics *intrinsics,
             const or_sensor_extrinsics *extrinsics,
             const or_ColorTrack_ColorInfo *color,
-            or_rigid_body_state *tracked_pose,
+            const or_pose_estimator_state *frame_pose,
+            or_pose_estimator_state *tracked_pose,
             ColorTracker_BlobMap *blob_map, bool *new_findings,
             const ColorTracker_OccupancyGrid *OccupancyGrid,
             const ColorTracker_TrackedPose *TrackedPose, bool debug,
@@ -189,9 +208,9 @@ TrackObject(const or_sensor_frame *image_frame,
     // Tracked Pose
     // TODO: Update the constant for the data
     const char *id = "1";
-    TrackedPose->data(id, self)->pos._value.x = world_x;
-    TrackedPose->data(id, self)->pos._value.y = world_y;
-    TrackedPose->data(id, self)->pos._value.z = world_z;
+    TrackedPose->data(id, self)->pos._value.x = frame_pose->pos._value.x + world_x;
+    TrackedPose->data(id, self)->pos._value.y = frame_pose->pos._value.y + world_y;
+    TrackedPose->data(id, self)->pos._value.z = frame_pose->pos._value.z + world_z;
     *new_findings = true;
   }
   else

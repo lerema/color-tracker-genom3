@@ -26,15 +26,15 @@ A GenoM module for the ColorTracker using a monocular camera.
 == Ports
 
 
-[[Pose]]
-=== Pose (in)
+[[DronePose]]
+=== DronePose (in)
 
 
 [role="small", width="50%", float="right", cols="1"]
 |===
 a|.Data structure
 [disc]
- * `struct ::or_pose_estimator::state` `Pose`
+ * `struct ::or_pose_estimator::state` `DronePose`
  ** `struct ::or::time::ts` `ts`
  *** `long` `sec`
  *** `long` `nsec`
@@ -80,6 +80,8 @@ a|.Data structure
  *** `double` `cov[6]`
 
 |===
+
+The pose of the drone.
 
 '''
 
@@ -494,7 +496,7 @@ Collect images from camera port.
 a|.Context
 [disc]
   * Free running
-* Reads port `<<Pose>>`
+* Reads port `<<DronePose>>`
 * Reads port `<<Frame>>`
 * Reads port `<<Intrinsics>>`
 * Reads port `<<Extrinsics>>`

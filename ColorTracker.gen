@@ -65,15 +65,17 @@ component ColorTracker {
 
     unsigned short current_index;	// current free index in the plate sequence
 
-    or_rigid_body::state tracked_pose;
-    or_rigid_body::state frame_pose;
+    or_pose_estimator::state tracked_pose;
+    or_pose_estimator::state frame_pose;
 
     boolean debug;
   };
 
   /* ------------- DEFINITION OF PORTS -------------- */
   // Robot
-  port in or_pose_estimator::state Pose;
+  port in or_pose_estimator::state DronePose {
+    doc "The pose of the drone.";
+  };
 
   // Camera
   port in or::sensor::frame Frame {
@@ -105,12 +107,12 @@ component ColorTracker {
     // period 100 ms;
     doc "Track the object in the image.";
 
-    codel <start> FetchPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in Pose)
+    codel <start> FetchPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose)
           yield pause::start, ready;
-    codel <ready> InitIDS(port in Frame, port in Intrinsics, port in Extrinsics,
-          ids out image_frame, ids out intrinsics, ids out extrinsics, ids out tracked_pose, ids out blob_map)
+    codel <ready> InitIDS(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose,
+          ids out image_frame, ids out intrinsics, ids out extrinsics, ids out frame_pose, ids out tracked_pose, ids out blob_map)
           yield pause::ready, main, ether;
-    codel <main> TrackObject(ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids inout tracked_pose, ids out blob_map, ids out new_findings,
+    codel <main> TrackObject(ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids in frame_pose, ids inout tracked_pose, ids out blob_map, ids out new_findings,
           port out OccupancyGrid, port out TrackedPose, ids in debug)
           yield pause::main, publish, ether;
     codel <publish> PublishOG(ids in blob_map, port out OccupancyGrid)
