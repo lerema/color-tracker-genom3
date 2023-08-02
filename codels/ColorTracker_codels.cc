@@ -46,3 +46,30 @@ SetMapSize(uint8_t map_width, uint8_t map_height,
 
   return genom_ok;
 }
+
+/* --- Function set_debug ----------------------------------------------- */
+
+/** Codel SetDebug of function set_debug.
+ *
+ * Returns genom_ok.
+ */
+genom_event
+SetDebug(bool is_debug_mode, bool *debug, const genom_context self)
+{
+  *debug = is_debug_mode;
+  return genom_ok;
+}
+
+/* --- Function set_verbose_level --------------------------------------- */
+
+/** Codel SetVerboseLevel of function set_verbose_level.
+ *
+ * Returns genom_ok.
+ */
+genom_event
+SetVerboseLevel(uint8_t verbose_level, uint8_t *v_level,
+                const genom_context self)
+{
+  *v_level = verbose_level;
+  return genom_ok;
+}

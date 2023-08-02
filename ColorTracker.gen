@@ -68,6 +68,7 @@ component ColorTracker {
     or_pose_estimator::state frame_pose;
 
     boolean debug;
+    octet v_level;
   };
 
   /* ------------- DEFINITION OF PORTS -------------- */
@@ -95,27 +96,34 @@ component ColorTracker {
   port out or_rigid_body::state TargetPose;
 
 
-  /* -------------------------- ATTRIBUTES --------------------------- */
-  attribute SetDebug (in debug) {
-    doc "Set the debug mode.";
-  };
-
   /* ------------------ TASK DEFINITION -------------------- */
   task track {
-    // period 100 ms;
+    period 100 ms;
     doc "Track the object in the image.";
 
-    codel <start> FetchPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose)
+    throw e_OUT_OF_MEM, e_BAD_IMAGE_PORT;
+  };
+
+  /* ------------------ ACTIVITY DEFINITION --------------------- */
+
+  activity color_track() {
+    doc "Detect the color and keep track of coordinates from the image.";
+    after set_color;
+    task track;
+
+    codel <start> FetchPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose, ids in debug)
           yield pause::start, ready;
     codel <ready> InitIDS(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose,
-          ids out image_frame, ids out intrinsics, ids out extrinsics, ids out frame_pose, ids out plates, ids out blob_map)
+          ids out image_frame, ids out intrinsics, ids out extrinsics, ids out frame_pose, ids out plates, ids out blob_map, ids in debug)
           yield pause::ready, main, ether;
     codel <main> TrackObject(ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids in frame_pose, ids inout plates, ids out blob_map, ids out new_findings,
           port out OccupancyGrid, port out PlatesInfo, ids in debug)
           yield pause::main, publish, ether;
     codel <publish> PublishOG(ids in blob_map, port out OccupancyGrid)
           yield main, ether;
-    throw e_OUT_OF_MEM, e_BAD_IMAGE_PORT;
+
+    throw e_BAD_IMAGE_PORT, e_BAD_POSE_PORT, e_BAD_OG_PORT, e_BAD_TARGET_PORT, e_OPENCV_ERROR;
+    interrupts color_track;
   };
 
   /* ------------------ SERVICE DEFINITION: Attributes -------------------- */
@@ -134,5 +142,15 @@ component ColorTracker {
     doc "Set the size of the map.";
     codel SetMapSize(local in map_width, local in map_height, ids out blob_map);
     throw e_BAD_OG_PORT;
+  };
+
+  function set_debug(in boolean is_debug_mode = FALSE : "Set debug mode (default: false)" ) {
+    doc "Set the debug mode.";
+    codel SetDebug(local in is_debug_mode, ids out debug);
+  };
+
+  function set_verbose_level(in octet verbose_level = 0 : "Verbose level") {
+    doc "Set the verbose level.";
+    codel SetVerboseLevel(local in verbose_level, ids out v_level);
   };
 };

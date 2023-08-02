@@ -9,49 +9,60 @@
 
 /* --- Task track ------------------------------------------------------- */
 
-/** Codel FetchPorts of task track.
+/* --- Activity color_track --------------------------------------------- */
+
+/** Codel FetchPorts of activity color_track.
  *
  * Triggered by ColorTracker_start.
  * Yields to ColorTracker_pause_start, ColorTracker_ready.
- * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT.
+ * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT,
+ *        ColorTracker_e_BAD_POSE_PORT, ColorTracker_e_BAD_OG_PORT,
+ *        ColorTracker_e_BAD_TARGET_PORT, ColorTracker_e_OPENCV_ERROR.
  */
 genom_event
 FetchPorts(const ColorTracker_Frame *Frame,
            const ColorTracker_Intrinsics *Intrinsics,
            const ColorTracker_Extrinsics *Extrinsics,
-           const ColorTracker_DronePose *DronePose,
+           const ColorTracker_DronePose *DronePose, bool debug,
            const genom_context self)
 {
   // Check if all ports are connected and available
-  if (check_port_in_p(Frame))
+  if (!check_port_in_p(Frame))
   {
     CODEL_LOG_WARNING("Image port not connected");
     return ColorTracker_pause_start;
   }
-  if (check_port_in_p(Intrinsics))
+  if (!check_port_in_p(Intrinsics))
   {
     CODEL_LOG_WARNING("Intrinsics port not connected");
     return ColorTracker_pause_start;
   }
-  if (check_port_in_p(Extrinsics))
+  if (!check_port_in_p(Extrinsics))
   {
     CODEL_LOG_WARNING("Extrinsics port not connected");
     return ColorTracker_pause_start;
   }
-  if (check_port_in_p(DronePose))
+  if (!check_port_in_p(DronePose))
   {
     CODEL_LOG_WARNING("Drone Pose port not connected");
     return ColorTracker_pause_start;
   }
+
+  if (debug)
+  {
+    CODEL_LOG_INFO(2, 1, "All ports connected, fetching data");
+  }
   return ColorTracker_ready;
 }
 
-/** Codel InitIDS of task track.
+/** Codel InitIDS of activity color_track.
  *
  * Triggered by ColorTracker_ready.
  * Yields to ColorTracker_pause_ready, ColorTracker_main,
  *           ColorTracker_ether.
- * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT.
+ * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT,
+ *        ColorTracker_e_BAD_POSE_PORT, ColorTracker_e_BAD_OG_PORT,
+ *        ColorTracker_e_BAD_TARGET_PORT, ColorTracker_e_OPENCV_ERROR.
  */
 genom_event
 InitIDS(const ColorTracker_Frame *Frame,
@@ -62,7 +73,8 @@ InitIDS(const ColorTracker_Frame *Frame,
         or_sensor_extrinsics *extrinsics,
         or_pose_estimator_state *frame_pose,
         or_ColorTrack_PlateSequence *plates,
-        ColorTracker_BlobMap *blob_map, const genom_context self)
+        ColorTracker_BlobMap *blob_map, bool debug,
+        const genom_context self)
 {
   or_sensor_frame *FrameData;
   or_sensor_intrinsics *IntrinsicsData;
@@ -116,7 +128,7 @@ InitIDS(const ColorTracker_Frame *Frame,
   *extrinsics = *ExtrinsicsData;
 
   // Initialize plates info
-  if (genom_sequence_reserve(&(plates->seq), 1) != -1)
+  if (genom_sequence_reserve(&(plates->seq), 1) == -1)
   {
     ColorTracker_e_OUT_OF_MEM_detail msg;
     snprintf(msg.message, sizeof(msg.message), "%s", "Failed to reserve memory for plates");
@@ -139,16 +151,22 @@ InitIDS(const ColorTracker_Frame *Frame,
   //   }
   // }
   blob_map->index = 0;
+  if (debug)
+  {
+    CODEL_LOG_INFO(2, 1, "InitIDS done");
+  }
 
   return ColorTracker_main;
 }
 
-/** Codel TrackObject of task track.
+/** Codel TrackObject of activity color_track.
  *
  * Triggered by ColorTracker_main.
  * Yields to ColorTracker_pause_main, ColorTracker_publish,
  *           ColorTracker_ether.
- * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT.
+ * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT,
+ *        ColorTracker_e_BAD_POSE_PORT, ColorTracker_e_BAD_OG_PORT,
+ *        ColorTracker_e_BAD_TARGET_PORT, ColorTracker_e_OPENCV_ERROR.
  */
 genom_event
 TrackObject(const or_sensor_frame *image_frame,
@@ -196,7 +214,8 @@ TrackObject(const or_sensor_frame *image_frame,
         image_frame->pixels._buffer,
         cv::Mat::AUTO_STEP);
   }
-  is_object_found = Tracking::detectObject(image, color->b, color->g, color->r, color->threshold, image_x, image_y);
+
+  is_object_found = Tracking::detectObject(image, color->b, color->g, color->r, color->threshold, image_x, image_y, debug);
 
   if (is_object_found)
   {
@@ -230,11 +249,13 @@ TrackObject(const or_sensor_frame *image_frame,
   return ColorTracker_publish;
 }
 
-/** Codel PublishOG of task track.
+/** Codel PublishOG of activity color_track.
  *
  * Triggered by ColorTracker_publish.
  * Yields to ColorTracker_main, ColorTracker_ether.
- * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT.
+ * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT,
+ *        ColorTracker_e_BAD_POSE_PORT, ColorTracker_e_BAD_OG_PORT,
+ *        ColorTracker_e_BAD_TARGET_PORT, ColorTracker_e_OPENCV_ERROR.
  */
 genom_event
 PublishOG(const ColorTracker_BlobMap *blob_map,

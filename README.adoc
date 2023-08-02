@@ -256,8 +256,8 @@ a|.Data structure
 
 == Services
 
-[[SetDebug]]
-=== SetDebug (attribute)
+[[set_debug]]
+=== set_debug (attribute)
 
 [role="small", width="50%", float="right", cols="1"]
 |===
@@ -268,6 +268,54 @@ a|.Inputs
 |===
 
 Set the debug mode.
+
+'''
+
+[[color_track]]
+=== color_track (activity)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Throws
+[disc]
+ * `exception ::ColorTracker::e_OUT_OF_MEM`
+ ** `short` `code`
+ ** `string<128>` `message`
+
+ * `exception ::ColorTracker::e_BAD_IMAGE_PORT`
+ ** `short` `code`
+ ** `string<128>` `message`
+
+ * `exception ::ColorTracker::e_BAD_POSE_PORT`
+ ** `short` `code`
+ ** `string<128>` `message`
+
+ * `exception ::ColorTracker::e_BAD_OG_PORT`
+ ** `short` `code`
+ ** `string<128>` `message`
+
+ * `exception ::ColorTracker::e_BAD_TARGET_PORT`
+ ** `short` `code`
+ ** `string<128>` `message`
+
+ * `exception ::ColorTracker::e_OPENCV_ERROR`
+ ** `short` `code`
+ ** `string<128>` `message`
+
+a|.Context
+[disc]
+  * In task `<<track>>`
+  (frequency 10.0 _Hz_)
+  * Reads port `<<DronePose>>`
+  * Reads port `<<Frame>>`
+  * Reads port `<<Intrinsics>>`
+  * Reads port `<<Extrinsics>>`
+  * Updates port `<<OccupancyGrid>>`
+  * Updates port `<<PlatesInfo>>`
+  * Interrupts `<<color_track>>`
+|===
+
+Detect the color and keep track of coordinates from the image.
 
 '''
 
@@ -319,63 +367,33 @@ Set the size of the map.
 
 '''
 
-[[get_image_frame]]
-=== get_image_frame (function)
+[[set_debug]]
+=== set_debug (function)
 
 [role="small", width="50%", float="right", cols="1"]
 |===
-a|.Outputs
+a|.Inputs
 [disc]
- * `struct ::or::sensor::frame` `image_frame`: Image frame
- ** `struct ::or::time::ts` `ts`
- *** `long` `sec`
- *** `long` `nsec`
- ** `boolean` `compressed`
- ** `unsigned short` `height`
- ** `unsigned short` `width`
- ** `unsigned short` `bpp`
- ** `sequence< octet >` `pixels`
-
-a|.Throws
-[disc]
- * `exception ::ColorTracker::e_BAD_IMAGE_PORT`
+ * `boolean` `is_debug_mode` (default `"0"`) Set debug mode (default: false)
 
 |===
 
-Get the image frame.
+Set the debug mode.
 
 '''
 
-[[track_object]]
-=== track_object (activity)
+[[set_verbose_level]]
+=== set_verbose_level (function)
 
 [role="small", width="50%", float="right", cols="1"]
 |===
-a|.Throws
+a|.Inputs
 [disc]
- * `exception ::ColorTracker::e_OUT_OF_MEM`
+ * `octet` `verbose_level` (default `"0"`) Verbose level
 
- * `exception ::ColorTracker::e_BAD_IMAGE_PORT`
-
- * `exception ::ColorTracker::e_BAD_POSE_PORT`
-
- * `exception ::ColorTracker::e_BAD_OG_PORT`
-
- * `exception ::ColorTracker::e_BAD_TARGET_PORT`
-
- * `exception ::ColorTracker::e_OPENCV_ERROR`
-
-a|.Context
-[disc]
-  * In task `<<track>>`
-  (frequency 10.0 _Hz_)
-  * Reads port `<<Frame>>`
-  * Updates port `<<OccupancyGrid>>`
-  * Updates port `<<TrackedPose>>`
-  * Interrupts `<<publish_occupancy_grid>>`
 |===
 
-Track the plates/objects in the image.
+Set the verbose level.
 
 '''
 
@@ -438,13 +456,7 @@ Collect images from camera port.
 |===
 a|.Context
 [disc]
-  * Free running
-* Reads port `<<DronePose>>`
-* Reads port `<<Frame>>`
-* Reads port `<<Intrinsics>>`
-* Reads port `<<Extrinsics>>`
-* Updates port `<<OccupancyGrid>>`
-* Updates port `<<PlatesInfo>>`
+  * Frequency 10.0 _Hz_
 a|.Throws
 [disc]
  * `exception ::ColorTracker::e_OUT_OF_MEM`
