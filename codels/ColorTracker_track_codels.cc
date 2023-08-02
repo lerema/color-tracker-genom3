@@ -61,7 +61,7 @@ InitIDS(const ColorTracker_Frame *Frame,
         or_sensor_frame *image_frame, or_sensor_intrinsics *intrinsics,
         or_sensor_extrinsics *extrinsics,
         or_pose_estimator_state *frame_pose,
-        or_pose_estimator_state *tracked_pose,
+        or_ColorTrack_PlateSequence *plates,
         ColorTracker_BlobMap *blob_map, const genom_context self)
 {
   or_sensor_frame *FrameData;
@@ -115,10 +115,14 @@ InitIDS(const ColorTracker_Frame *Frame,
   *intrinsics = *IntrinsicsData;
   *extrinsics = *ExtrinsicsData;
 
-  // Initialize tracked pose
-  tracked_pose->pos._value.x = 0.0;
-  tracked_pose->pos._value.y = 0.0;
-  tracked_pose->pos._value.z = 0.0;
+  // Initialize plates info
+  if (genom_sequence_reserve(&(plates->seq), 1) != -1)
+  {
+    ColorTracker_e_OUT_OF_MEM_detail msg;
+    snprintf(msg.message, sizeof(msg.message), "%s", "Failed to reserve memory for plates");
+    // warnx("%s", msg.message);
+    return ColorTracker_e_OUT_OF_MEM(&msg, self);
+  }
 
   // Initialize blob map
   blob_map->is_blobbed = false;
@@ -152,10 +156,10 @@ TrackObject(const or_sensor_frame *image_frame,
             const or_sensor_extrinsics *extrinsics,
             const or_ColorTrack_ColorInfo *color,
             const or_pose_estimator_state *frame_pose,
-            or_pose_estimator_state *tracked_pose,
+            or_ColorTrack_PlateSequence *plates,
             ColorTracker_BlobMap *blob_map, bool *new_findings,
             const ColorTracker_OccupancyGrid *OccupancyGrid,
-            const ColorTracker_TrackedPose *TrackedPose, bool debug,
+            const ColorTracker_PlatesInfo *PlatesInfo, bool debug,
             const genom_context self)
 {
   bool is_object_found = false;
@@ -205,13 +209,18 @@ TrackObject(const or_sensor_frame *image_frame,
     auto z = 3.0; // TODO: get from camera info
     Tracking::imageToWorld(image_x, image_y, world_x, world_y, world_z, fx, fy, cx, cy, z);
 
-    // Tracked Pose
-    // TODO: Update the constant for the data
-    const char *id = "1";
-    TrackedPose->data(id, self)->pos._value.x = frame_pose->pos._value.x + world_x;
-    TrackedPose->data(id, self)->pos._value.y = frame_pose->pos._value.y + world_y;
-    TrackedPose->data(id, self)->pos._value.z = frame_pose->pos._value.z + world_z;
-    *new_findings = true;
+    // Convert relative world coordinates to absolute world coordinates
+    double abs_world_x, abs_world_y, abs_world_z;
+    abs_world_x = world_x + frame_pose->pos._value.x;
+    abs_world_y = world_y + frame_pose->pos._value.y;
+    abs_world_z = world_z + frame_pose->pos._value.z;
+
+    // Add nearest neighbors to avoid duplicates
+    // Tracking::nearestNeighbours(abs_world_x, abs_world_y, abs_world_z, plates);
+
+    // Plates info
+    or_ColorTrack_PlateSequence *PlatesInfoData = plates;
+    write_port_p(PlatesInfo);
   }
   else
   {

@@ -21,6 +21,8 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/types_c.h>
 
+#include "ColorTracker_c_types.h"
+
 using namespace std;
 
 namespace Tracking
@@ -84,6 +86,8 @@ namespace Tracking
 
                 // Convert to world coordinates
         }
+
+        void nearestNeighbours(double &x, double &y, double &z, or_ColorTrack_PlateSequence &plates){};
 
 } // namespace Tracking
 

@@ -65,7 +65,6 @@ component ColorTracker {
 
     unsigned short current_index;	// current free index in the plate sequence
 
-    or_pose_estimator::state tracked_pose;
     or_pose_estimator::state frame_pose;
 
     boolean debug;
@@ -88,11 +87,10 @@ component ColorTracker {
   port out or::Environment::OccupancyGrid OccupancyGrid {
     doc "To visualise the findings in desired tool.";};
 
-  port multiple out or_pose_estimator::state TrackedPose { // TODO: Port for array of poses
-    doc "The pose of the tracked object.";};
-
   // ColorTracker
-  port out or::ColorTrack::PlateSequence Plates; // The plates sequence
+  port out or::ColorTrack::PlateSequence PlatesInfo {
+    doc "Information on detected blobs over time.";
+  }; // The plates sequence
 
   port out or_rigid_body::state TargetPose;
 
@@ -110,10 +108,10 @@ component ColorTracker {
     codel <start> FetchPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose)
           yield pause::start, ready;
     codel <ready> InitIDS(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose,
-          ids out image_frame, ids out intrinsics, ids out extrinsics, ids out frame_pose, ids out tracked_pose, ids out blob_map)
+          ids out image_frame, ids out intrinsics, ids out extrinsics, ids out frame_pose, ids out plates, ids out blob_map)
           yield pause::ready, main, ether;
-    codel <main> TrackObject(ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids in frame_pose, ids inout tracked_pose, ids out blob_map, ids out new_findings,
-          port out OccupancyGrid, port out TrackedPose, ids in debug)
+    codel <main> TrackObject(ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids in frame_pose, ids inout plates, ids out blob_map, ids out new_findings,
+          port out OccupancyGrid, port out PlatesInfo, ids in debug)
           yield pause::main, publish, ether;
     codel <publish> PublishOG(ids in blob_map, port out OccupancyGrid)
           yield main, ether;
