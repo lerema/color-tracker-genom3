@@ -27,7 +27,7 @@ using namespace std;
 
 namespace Tracking
 {
-        bool detectObject(cv::Mat &image, int b, int g, int r, int tolerance, double &x, double &y, bool debug = false)
+        bool detectObject(cv::Mat &image, int b, int g, int r, int tolerance, double &x, double &y, bool debug = false, bool show_frames = false)
         {
 
                 // Create the mask &initialize it to white (no color detected)
@@ -74,7 +74,7 @@ namespace Tracking
                         return false;
                 }
 
-                if (debug)
+                if (debug && show_frames)
                 {
                         cv::imshow("Image Mask", mask);
                         cv::imshow("Camera Image", image);

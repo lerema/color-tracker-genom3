@@ -382,6 +382,21 @@ Set the debug mode.
 
 '''
 
+[[show_image_frames]]
+=== show_image_frames (function)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `boolean` `show_cv_frames` (default `"0"`) Show image frames (default: false)
+
+|===
+
+Show image frames.
+
+'''
+
 [[set_verbose_level]]
 === set_verbose_level (function)
 
@@ -394,33 +409,6 @@ a|.Inputs
 |===
 
 Set the verbose level.
-
-'''
-
-[[publish_occupancy_grid]]
-=== publish_occupancy_grid (activity)
-
-[role="small", width="50%", float="right", cols="1"]
-|===
-a|.Throws
-[disc]
- * `exception ::ColorTracker::e_OUT_OF_MEM`
-
- * `exception ::ColorTracker::e_BAD_IMAGE_PORT`
-
- * `exception ::ColorTracker::e_BAD_OG_PORT`
-
- * `exception ::ColorTracker::e_OPENCV_ERROR`
-
-a|.Context
-[disc]
-  * In task `<<track>>`
-  (frequency 10.0 _Hz_)
-  * Updates port `<<OccupancyGrid>>`
-  * Interrupts `<<track_object>>`
-|===
-
-Publish the occupancy grid map.
 
 '''
 

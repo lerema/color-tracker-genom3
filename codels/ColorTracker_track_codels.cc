@@ -14,7 +14,7 @@
 /** Codel FetchPorts of activity color_track.
  *
  * Triggered by ColorTracker_start.
- * Yields to ColorTracker_pause_start, ColorTracker_ready.
+ * Yields to ColorTracker_pause_start, ColorTracker_poll.
  * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT,
  *        ColorTracker_e_BAD_POSE_PORT, ColorTracker_e_BAD_OG_PORT,
  *        ColorTracker_e_BAD_TARGET_PORT, ColorTracker_e_OPENCV_ERROR.
@@ -52,13 +52,13 @@ FetchPorts(const ColorTracker_Frame *Frame,
   {
     CODEL_LOG_INFO(2, 1, "All ports connected, fetching data");
   }
-  return ColorTracker_ready;
+  return ColorTracker_poll;
 }
 
 /** Codel InitIDS of activity color_track.
  *
- * Triggered by ColorTracker_ready.
- * Yields to ColorTracker_pause_ready, ColorTracker_main,
+ * Triggered by ColorTracker_poll.
+ * Yields to ColorTracker_pause_poll, ColorTracker_main,
  *           ColorTracker_ether.
  * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT,
  *        ColorTracker_e_BAD_POSE_PORT, ColorTracker_e_BAD_OG_PORT,
@@ -89,7 +89,7 @@ InitIDS(const ColorTracker_Frame *Frame,
     snprintf(msg.message, sizeof(msg.message), "%s", "Failed to read image port. waiting");
     // return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
     //  warnx("%s", msg.message);
-    return ColorTracker_pause_ready;
+    return ColorTracker_pause_poll;
   }
   if (Intrinsics->read(self) == genom_ok && Intrinsics->data(self))
     IntrinsicsData = Intrinsics->data(self);
@@ -99,7 +99,7 @@ InitIDS(const ColorTracker_Frame *Frame,
     snprintf(msg.message, sizeof(msg.message), "%s", "Failed to read intrinsics port");
     // return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
     // warnx("%s", msg.message);
-    return ColorTracker_pause_ready;
+    return ColorTracker_pause_poll;
   }
   if (Extrinsics->read(self) == genom_ok && Extrinsics->data(self))
     ExtrinsicsData = Extrinsics->data(self);
@@ -109,7 +109,7 @@ InitIDS(const ColorTracker_Frame *Frame,
     snprintf(msg.message, sizeof(msg.message), "%s", "Failed to read extrinsics port");
     // warnx("%s", msg.message);
     // return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
-    return ColorTracker_pause_ready;
+    return ColorTracker_pause_poll;
   }
   if (DronePose->read(self) == genom_ok && DronePose->data(self))
     frame_pose = DronePose->data(self);
@@ -119,7 +119,7 @@ InitIDS(const ColorTracker_Frame *Frame,
     snprintf(msg.message, sizeof(msg.message), "%s", "Failed to read pose port");
     // warnx("%s", msg.message);
     // return ColorTracker_e_BAD_IMAGE_PORT(&msg, self);
-    return ColorTracker_pause_ready;
+    return ColorTracker_pause_poll;
   }
 
   // Copy data
@@ -153,7 +153,7 @@ InitIDS(const ColorTracker_Frame *Frame,
   blob_map->index = 0;
   if (debug)
   {
-    CODEL_LOG_INFO(2, 1, "InitIDS done");
+    CODEL_LOG_INFO(2, 1, "Fetched new data...");
   }
 
   return ColorTracker_main;
@@ -162,8 +162,8 @@ InitIDS(const ColorTracker_Frame *Frame,
 /** Codel TrackObject of activity color_track.
  *
  * Triggered by ColorTracker_main.
- * Yields to ColorTracker_pause_main, ColorTracker_publish,
- *           ColorTracker_ether.
+ * Yields to ColorTracker_main, ColorTracker_poll,
+ *           ColorTracker_publish, ColorTracker_ether.
  * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT,
  *        ColorTracker_e_BAD_POSE_PORT, ColorTracker_e_BAD_OG_PORT,
  *        ColorTracker_e_BAD_TARGET_PORT, ColorTracker_e_OPENCV_ERROR.
@@ -178,7 +178,7 @@ TrackObject(const or_sensor_frame *image_frame,
             ColorTracker_BlobMap *blob_map, bool *new_findings,
             const ColorTracker_OccupancyGrid *OccupancyGrid,
             const ColorTracker_PlatesInfo *PlatesInfo, bool debug,
-            const genom_context self)
+            bool show_frames, const genom_context self)
 {
   bool is_object_found = false;
   double image_x = 0.0, image_y = 0.0;
@@ -188,7 +188,7 @@ TrackObject(const or_sensor_frame *image_frame,
   {
     std::vector<uint8_t> buf;
     buf.assign(image_frame->pixels._buffer, image_frame->pixels._buffer + image_frame->pixels._length);
-    imdecode(buf, cv::IMREAD_GRAYSCALE, &image);
+    imdecode(buf, cv::IMREAD_COLOR, &image);
   }
   else
   {
@@ -215,7 +215,7 @@ TrackObject(const or_sensor_frame *image_frame,
         cv::Mat::AUTO_STEP);
   }
 
-  is_object_found = Tracking::detectObject(image, color->b, color->g, color->r, color->threshold, image_x, image_y, debug);
+  is_object_found = Tracking::detectObject(image, color->b, color->g, color->r, color->threshold, image_x, image_y, debug, show_frames);
 
   if (is_object_found)
   {
@@ -233,6 +233,7 @@ TrackObject(const or_sensor_frame *image_frame,
     abs_world_x = world_x + frame_pose->pos._value.x;
     abs_world_y = world_y + frame_pose->pos._value.y;
     abs_world_z = world_z + frame_pose->pos._value.z;
+    CODEL_LOG_WARNING("Object found at: %f, %f, %f", abs_world_x, abs_world_y, abs_world_z);
 
     // Add nearest neighbors to avoid duplicates
     // Tracking::nearestNeighbours(abs_world_x, abs_world_y, abs_world_z, plates);
@@ -240,13 +241,14 @@ TrackObject(const or_sensor_frame *image_frame,
     // Plates info
     or_ColorTrack_PlateSequence *PlatesInfoData = plates;
     write_port_p(PlatesInfo);
+    *new_findings = true;
   }
   else
   {
     *new_findings = false;
-    return ColorTracker_pause_main;
   }
-  return ColorTracker_publish;
+
+  return ColorTracker_poll;
 }
 
 /** Codel PublishOG of activity color_track.

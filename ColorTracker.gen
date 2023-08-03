@@ -67,7 +67,7 @@ component ColorTracker {
 
     or_pose_estimator::state frame_pose;
 
-    boolean debug;
+    boolean debug, show_frames;
     octet v_level;
   };
 
@@ -112,13 +112,13 @@ component ColorTracker {
     task track;
 
     codel <start> FetchPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose, ids in debug)
-          yield pause::start, ready;
-    codel <ready> InitIDS(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose,
+          yield pause::start, poll;
+    codel <poll> InitIDS(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose,
           ids out image_frame, ids out intrinsics, ids out extrinsics, ids out frame_pose, ids out plates, ids out blob_map, ids in debug)
-          yield pause::ready, main, ether;
+          yield pause::poll, main, ether;
     codel <main> TrackObject(ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids in frame_pose, ids inout plates, ids out blob_map, ids out new_findings,
-          port out OccupancyGrid, port out PlatesInfo, ids in debug)
-          yield pause::main, publish, ether;
+          port out OccupancyGrid, port out PlatesInfo, ids in debug, ids in show_frames)
+          yield main, poll, publish, ether;
     codel <publish> PublishOG(ids in blob_map, port out OccupancyGrid)
           yield main, ether;
 
@@ -147,6 +147,11 @@ component ColorTracker {
   function set_debug(in boolean is_debug_mode = FALSE : "Set debug mode (default: false)" ) {
     doc "Set the debug mode.";
     codel SetDebug(local in is_debug_mode, ids out debug);
+  };
+
+  function show_image_frames(in boolean show_cv_frames = FALSE : "Show image frames (default: false)" ) {
+    doc "Show image frames.";
+    codel ShowFrames(local in show_cv_frames, ids out show_frames);
   };
 
   function set_verbose_level(in octet verbose_level = 0 : "Verbose level") {

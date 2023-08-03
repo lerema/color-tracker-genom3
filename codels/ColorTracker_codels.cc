@@ -60,6 +60,20 @@ SetDebug(bool is_debug_mode, bool *debug, const genom_context self)
   return genom_ok;
 }
 
+/* --- Function show_image_frames --------------------------------------- */
+
+/** Codel ShowFrames of function show_image_frames.
+ *
+ * Returns genom_ok.
+ */
+genom_event
+ShowFrames(bool show_cv_frames, bool *show_frames,
+           const genom_context self)
+{
+  *show_frames = show_cv_frames;
+  return genom_ok;
+}
+
 /* --- Function set_verbose_level --------------------------------------- */
 
 /** Codel SetVerboseLevel of function set_verbose_level.
