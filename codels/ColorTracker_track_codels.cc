@@ -129,7 +129,7 @@ FetchDataFromPorts(const ColorTracker_Frame *Frame,
   *extrinsics = *ExtrinsicsData;
 
   // Initialize plates info
-  if (genom_sequence_reserve(&(plates->seq), 1) == -1)
+  if (genom_sequence_reserve(&(plates->seq), 15) == -1)
   {
     ColorTracker_e_OUT_OF_MEM_detail msg;
     snprintf(msg.message, sizeof(msg.message), "%s", "Failed to reserve memory for plates");
@@ -242,18 +242,25 @@ TrackObject(const or_sensor_frame *image_frame,
     Tracking::imageToWorld(image_x, image_y, world_x, world_y, world_z, fx, fy, cx, cy, z);
 
     // Convert relative world coordinates to absolute world coordinates
-    double abs_world_x, abs_world_y, abs_world_z;
-    abs_world_x = world_x + DronePoseData->pos._value.x;
-    abs_world_y = world_y + DronePoseData->pos._value.y;
-    abs_world_z = world_z + DronePoseData->pos._value.z;
-    CODEL_LOG_WARNING("Object found at: %f, %f, %f", abs_world_x, abs_world_y, abs_world_z);
+    or_ColorTrack_PlateInfo plate;
+    plate.coord.x = world_x + DronePoseData->pos._value.x;
+    plate.coord.y = world_y + DronePoseData->pos._value.y;
+    plate.coord.z = world_z + DronePoseData->pos._value.z;
+    plate.index = plates->seq._length + 1;
+
+    plates->seq._buffer[plates->seq._length] = plate;
+    plates->seq._length++;
 
     // Add nearest neighbors to avoid duplicates
-    // Tracking::nearestNeighbours(abs_world_x, abs_world_y, abs_world_z, plates);
+    double distance_threshold = 0.5; // TODO: Move distance_threshold to a separate function
+    Tracking::nearestNeighbours(plates, distance_threshold);
 
     // Plates info
-    or_ColorTrack_PlateSequence *PlatesInfoData = plates;
-    write_port_p(PlatesInfo);
+    PlatesInfo->data(self)->seq._length = plates->seq._length;
+    PlatesInfo->data(self)->seq._buffer = plates->seq._buffer;
+    PlatesInfo->data(self)->seq._maximum = plates->seq._length;
+    PlatesInfo->write(self);
+
     *new_findings = true;
   }
   else

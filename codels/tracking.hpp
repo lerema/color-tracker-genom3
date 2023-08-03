@@ -17,6 +17,9 @@
  */
 #ifndef TRACKING_HPP
 #define TRACKING_HPP
+#include <iostream>
+#include <vector>
+#include <cmath>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/types_c.h>
@@ -96,7 +99,93 @@ namespace Tracking
                 // Convert to world coordinates
         }
 
-        void nearestNeighbours(double &x, double &y, double &z, or_ColorTrack_PlateSequence &plates){};
+        // Function to calculate the distance between two coordinates
+        double distance(const or_ColorTrack_PlateInfo &c1, const or_ColorTrack_PlateInfo &c2)
+        {
+                double dx = c2.coord.x - c1.coord.x;
+                double dy = c2.coord.y - c1.coord.y;
+                double dz = c2.coord.z - c1.coord.z;
+                return std::sqrt(dx * dx + dy * dy + dz * dz);
+        }
+
+        // Function to group coordinates based on a threshold
+        std::vector<std::vector<or_ColorTrack_PlateInfo>> groupCoordinates(const std::vector<or_ColorTrack_PlateInfo> &coordinates, double threshold)
+        {
+                std::vector<std::vector<or_ColorTrack_PlateInfo>> groups;
+                std::vector<or_ColorTrack_PlateInfo> currentGroup;
+
+                for (size_t i = 0; i < coordinates.size(); ++i)
+                {
+                        if (currentGroup.empty())
+                        {
+                                currentGroup.push_back(coordinates[i]);
+                        }
+                        else
+                        {
+                                double dist = distance(coordinates[i], currentGroup.front());
+                                if (dist <= threshold)
+                                {
+                                        currentGroup.push_back(coordinates[i]);
+                                }
+                                else
+                                {
+                                        // Add the current group to the result
+                                        groups.push_back(currentGroup);
+                                        currentGroup.clear();
+                                        currentGroup.push_back(coordinates[i]);
+                                }
+                        }
+                }
+
+                // Add the last group to the result
+                if (!currentGroup.empty())
+                {
+                        groups.push_back(currentGroup);
+                }
+
+                return groups;
+        }
+
+        void nearestNeighbours(or_ColorTrack_PlateSequence *plates, double threshold)
+        {
+                // Convert the sequence to a vector
+                std::vector<or_ColorTrack_PlateInfo> plates_vector;
+                for (size_t i = 0; i < plates->seq._length; ++i)
+                {
+                        plates_vector.push_back(plates->seq._buffer[i]);
+                }
+
+                // Group the coordinates
+                std::vector<std::vector<or_ColorTrack_PlateInfo>> groups =
+                    groupCoordinates(plates_vector, threshold);
+
+                // Compute the average of each group
+                or_ColorTrack_PlateSequence result;
+                result.seq._length = groups.size();
+                result.seq._buffer = new or_ColorTrack_PlateInfo[result.seq._length];
+                for (size_t i = 0; i < groups.size(); ++i)
+                {
+                        or_ColorTrack_PlateInfo average;
+                        average.coord.x = 0;
+                        average.coord.y = 0;
+                        average.coord.z = 0;
+                        average.index = groups[i][0].index;
+                        for (size_t j = 0; j < groups[i].size(); ++j)
+                        {
+                                average.coord.x += groups[i][j].coord.x;
+                                average.coord.y += groups[i][j].coord.y;
+                                average.coord.z += groups[i][j].coord.z;
+                        }
+                        average.coord.x /= groups[i].size();
+                        average.coord.y /= groups[i].size();
+                        average.coord.z /= groups[i].size();
+                        average.state = 1; // Make it as interesting
+                        result.seq._buffer[i] = average;
+                }
+
+                // Copy the result to the output
+                *plates = result;
+        };
 
 } // namespace Tracking
 

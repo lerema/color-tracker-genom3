@@ -10,7 +10,6 @@ module ColorTrack {
 
   struct PlateInfo {
     short index;
-    short nb_images;
     PlateState state;
     or::t3d::pos coord;
   };
