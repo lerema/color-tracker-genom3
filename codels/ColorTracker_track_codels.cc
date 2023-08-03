@@ -55,7 +55,7 @@ FetchPorts(const ColorTracker_Frame *Frame,
   return ColorTracker_poll;
 }
 
-/** Codel InitIDS of activity color_track.
+/** Codel FetchDataFromPorts of activity color_track.
  *
  * Triggered by ColorTracker_poll.
  * Yields to ColorTracker_pause_poll, ColorTracker_main,
@@ -65,16 +65,17 @@ FetchPorts(const ColorTracker_Frame *Frame,
  *        ColorTracker_e_BAD_TARGET_PORT, ColorTracker_e_OPENCV_ERROR.
  */
 genom_event
-InitIDS(const ColorTracker_Frame *Frame,
-        const ColorTracker_Intrinsics *Intrinsics,
-        const ColorTracker_Extrinsics *Extrinsics,
-        const ColorTracker_DronePose *DronePose,
-        or_sensor_frame *image_frame, or_sensor_intrinsics *intrinsics,
-        or_sensor_extrinsics *extrinsics,
-        or_pose_estimator_state *frame_pose,
-        or_ColorTrack_PlateSequence *plates,
-        ColorTracker_BlobMap *blob_map, bool debug,
-        const genom_context self)
+FetchDataFromPorts(const ColorTracker_Frame *Frame,
+                   const ColorTracker_Intrinsics *Intrinsics,
+                   const ColorTracker_Extrinsics *Extrinsics,
+                   const ColorTracker_DronePose *DronePose,
+                   or_sensor_frame *image_frame,
+                   or_sensor_intrinsics *intrinsics,
+                   or_sensor_extrinsics *extrinsics,
+                   or_pose_estimator_state *frame_pose,
+                   or_ColorTrack_PlateSequence *plates,
+                   ColorTracker_BlobMap *blob_map, bool debug,
+                   const genom_context self)
 {
   or_sensor_frame *FrameData;
   or_sensor_intrinsics *IntrinsicsData;
@@ -173,7 +174,7 @@ TrackObject(const or_sensor_frame *image_frame,
             const or_sensor_intrinsics *intrinsics,
             const or_sensor_extrinsics *extrinsics,
             const or_ColorTrack_ColorInfo *color,
-            const or_pose_estimator_state *frame_pose,
+            const ColorTracker_DronePose *DronePose,
             or_ColorTrack_PlateSequence *plates,
             ColorTracker_BlobMap *blob_map, bool *new_findings,
             const ColorTracker_OccupancyGrid *OccupancyGrid,
@@ -219,20 +220,32 @@ TrackObject(const or_sensor_frame *image_frame,
 
   if (is_object_found)
   {
+    // Check if the drone position is fetched
+    or_pose_estimator_state *DronePoseData;
+    DronePoseData = DronePose->data(self);
+    if (!DronePoseData->pos._present)
+    {
+      CODEL_LOG_WARNING("Drone position is not fetched yet");
+      ColorTracker_e_BAD_POSE_PORT_detail msg;
+      snprintf(msg.message, sizeof(msg.message), "%s",
+               "Drone position is not fetched yet");
+      return ColorTracker_e_BAD_POSE_PORT(&msg, self);
+    }
+
     // Convert image coordinates to world coordinates
     double world_x, world_y, world_z;
     auto fx = intrinsics->calib.fx;
     auto fy = intrinsics->calib.fy;
     auto cx = intrinsics->calib.cx;
     auto cy = intrinsics->calib.cy;
-    auto z = 3.0; // TODO: get from camera info
+    auto z = 0.0; // TODO: get from camera info & roi
     Tracking::imageToWorld(image_x, image_y, world_x, world_y, world_z, fx, fy, cx, cy, z);
 
     // Convert relative world coordinates to absolute world coordinates
     double abs_world_x, abs_world_y, abs_world_z;
-    abs_world_x = world_x + frame_pose->pos._value.x;
-    abs_world_y = world_y + frame_pose->pos._value.y;
-    abs_world_z = world_z + frame_pose->pos._value.z;
+    abs_world_x = world_x + DronePoseData->pos._value.x;
+    abs_world_y = world_y + DronePoseData->pos._value.y;
+    abs_world_z = world_z + DronePoseData->pos._value.z;
     CODEL_LOG_WARNING("Object found at: %f, %f, %f", abs_world_x, abs_world_y, abs_world_z);
 
     // Add nearest neighbors to avoid duplicates

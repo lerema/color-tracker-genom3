@@ -113,10 +113,10 @@ component ColorTracker {
 
     codel <start> FetchPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose, ids in debug)
           yield pause::start, poll;
-    codel <poll> InitIDS(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose,
+    codel <poll> FetchDataFromPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose,
           ids out image_frame, ids out intrinsics, ids out extrinsics, ids out frame_pose, ids out plates, ids out blob_map, ids in debug)
           yield pause::poll, main, ether;
-    codel <main> TrackObject(ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids in frame_pose, ids inout plates, ids out blob_map, ids out new_findings,
+    codel <main> TrackObject(ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, port in DronePose, ids inout plates, ids out blob_map, ids out new_findings,
           port out OccupancyGrid, port out PlatesInfo, ids in debug, ids in show_frames)
           yield main, poll, publish, ether;
     codel <publish> PublishOG(ids in blob_map, port out OccupancyGrid)

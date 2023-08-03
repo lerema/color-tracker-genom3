@@ -84,8 +84,11 @@ namespace Tracking
                 return true;
         }
 
-        void imageToWorld(double x, double y, double &xw, double &yw, double &zw, double fx, double fy, double cx, double cy, double z)
+        void imageToWorld(double x, double y, double &xw, double &yw,
+                          double &zw, double fx, double fy, double cx,
+                          double cy, double z)
         {
+                // TODO: Currently the conversion behaves more like a blob detected and returns the x, y and z of the reference directly
                 xw = (x - cx) * z / fx;
                 yw = (y - cy) * z / fy;
                 zw = z;
