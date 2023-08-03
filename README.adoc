@@ -412,26 +412,34 @@ Set the verbose level.
 
 '''
 
-[[collect_images]]
-=== collect_images (activity)
+[[set_distance_threshold]]
+=== set_distance_threshold (function)
 
 [role="small", width="50%", float="right", cols="1"]
 |===
-a|.Throws
+a|.Inputs
 [disc]
- * `exception ::ColorTracker::e_OUT_OF_MEM`
+ * `float` `tolerance` (default `"0.5"`) Distance threshold to sample the coordinates (default: 0.5m))
 
-a|.Context
-[disc]
-  * In task `<<track>>`
-  (frequency 10.0 _Hz_)
-  * Reads port `<<Frame>>`
-  * Reads port `<<Intrinsics>>`
-  * Reads port `<<Extrinsics>>`
-  * Interrupts `<<track_object>>`
 |===
 
-Collect images from camera port.
+Set the distance threshold to sample the coordinates using linear interpolation.
+
+'''
+
+[[start_color_tracking]]
+=== start_color_tracking (function)
+
+
+Start tracking the object.
+
+'''
+
+[[stop_color_tracking]]
+=== stop_color_tracking (function)
+
+
+Stop tracking the object.
 
 '''
 

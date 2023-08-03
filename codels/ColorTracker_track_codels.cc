@@ -170,17 +170,27 @@ FetchDataFromPorts(const ColorTracker_Frame *Frame,
  *        ColorTracker_e_BAD_TARGET_PORT, ColorTracker_e_OPENCV_ERROR.
  */
 genom_event
-TrackObject(const or_sensor_frame *image_frame,
+TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
             const or_sensor_intrinsics *intrinsics,
             const or_sensor_extrinsics *extrinsics,
             const or_ColorTrack_ColorInfo *color,
             const ColorTracker_DronePose *DronePose,
+            float distance_threshold,
             or_ColorTrack_PlateSequence *plates,
             ColorTracker_BlobMap *blob_map, bool *new_findings,
             const ColorTracker_OccupancyGrid *OccupancyGrid,
             const ColorTracker_PlatesInfo *PlatesInfo, bool debug,
             bool show_frames, const genom_context self)
 {
+
+  if (!start_tracking)
+  {
+    if (debug)
+    {
+      CODEL_LOG_WARNING("Color Tracking not running.");
+    }
+    return ColorTracker_poll;
+  }
   bool is_object_found = false;
   double image_x = 0.0, image_y = 0.0;
   // Convert frame to cv::Mat
@@ -251,8 +261,7 @@ TrackObject(const or_sensor_frame *image_frame,
     plates->seq._buffer[plates->seq._length] = plate;
     plates->seq._length++;
 
-    // Add nearest neighbors to avoid duplicates
-    double distance_threshold = 0.5; // TODO: Move distance_threshold to a separate function
+    // Gather nearest neighbors to avoid duplicates
     Tracking::nearestNeighbours(plates, distance_threshold);
 
     // Plates info

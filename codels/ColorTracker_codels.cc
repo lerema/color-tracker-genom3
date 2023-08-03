@@ -87,3 +87,43 @@ SetVerboseLevel(uint8_t verbose_level, uint8_t *v_level,
   *v_level = verbose_level;
   return genom_ok;
 }
+
+/* --- Function set_distance_threshold ---------------------------------- */
+
+/** Codel SetDistanceThreshold of function set_distance_threshold.
+ *
+ * Returns genom_ok.
+ */
+genom_event
+SetDistanceThreshold(float tolerance, float *distance_threshold,
+                     const genom_context self)
+{
+  *distance_threshold = tolerance;
+  return genom_ok;
+}
+
+/* --- Function start_color_tracking ------------------------------------ */
+
+/** Codel SetStartTracking of function start_color_tracking.
+ *
+ * Returns genom_ok.
+ */
+genom_event
+SetStartTracking(bool *start_tracking, const genom_context self)
+{
+  *start_tracking = true;
+  return genom_ok;
+}
+
+/* --- Function stop_color_tracking ------------------------------------- */
+
+/** Codel SetStopTracking of function stop_color_tracking.
+ *
+ * Returns genom_ok.
+ */
+genom_event
+SetStopTracking(bool *start_tracking, const genom_context self)
+{
+  *start_tracking = false;
+  return genom_ok;
+}

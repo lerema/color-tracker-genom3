@@ -77,7 +77,7 @@ namespace Tracking
                         return false;
                 }
 
-                if (debug && show_frames)
+                if (debug || show_frames)
                 {
                         cv::imshow("Image Mask", mask);
                         cv::imshow("Camera Image", image);
@@ -109,7 +109,7 @@ namespace Tracking
         }
 
         // Function to group coordinates based on a threshold
-        std::vector<std::vector<or_ColorTrack_PlateInfo>> groupCoordinates(const std::vector<or_ColorTrack_PlateInfo> &coordinates, double threshold)
+        std::vector<std::vector<or_ColorTrack_PlateInfo>> groupCoordinates(const std::vector<or_ColorTrack_PlateInfo> &coordinates, float &threshold)
         {
                 std::vector<std::vector<or_ColorTrack_PlateInfo>> groups;
                 std::vector<or_ColorTrack_PlateInfo> currentGroup;
@@ -146,7 +146,7 @@ namespace Tracking
                 return groups;
         }
 
-        void nearestNeighbours(or_ColorTrack_PlateSequence *plates, double threshold)
+        void nearestNeighbours(or_ColorTrack_PlateSequence *plates, float threshold)
         {
                 // Convert the sequence to a vector
                 std::vector<or_ColorTrack_PlateInfo> plates_vector;
