@@ -188,25 +188,33 @@ namespace Tracking
         or_ColorTrack_PlateSequence result;
         result.seq._length = groups.size();
         result.seq._buffer = new or_ColorTrack_PlateInfo[result.seq._length];
+        // for (size_t i = 0; i < groups.size(); ++i)
+        // {
+        //     or_ColorTrack_PlateInfo average;
+        //     average.coord.x = 0;
+        //     average.coord.y = 0;
+        //     average.coord.z = 0;
+        //     average.index = i;
+        //     for (size_t j = 0; j < groups[i].size(); ++j)
+        //     {
+        //         average.coord.x += groups[i][j].coord.x;
+        //         average.coord.y += groups[i][j].coord.y;
+        //         average.coord.z += groups[i][j].coord.z;
+        //     }
+        //     average.coord.x /= groups[i].size();
+        //     average.coord.y /= groups[i].size();
+        //     average.coord.z /= groups[i].size();
+        //     average.num_blobs += groups[i].size(); // The number of blobs is
+        //     the number of points in the group average.state = 1; // Make it
+        //     as interesting result.seq._buffer[i] = average;
+        // }
         for (size_t i = 0; i < groups.size(); ++i)
         {
-            or_ColorTrack_PlateInfo average;
-            average.coord.x = 0;
-            average.coord.y = 0;
-            average.coord.z = 0;
-            average.index = i;
-            for (size_t j = 0; j < groups[i].size(); ++j)
-            {
-                average.coord.x += groups[i][j].coord.x;
-                average.coord.y += groups[i][j].coord.y;
-                average.coord.z += groups[i][j].coord.z;
-            }
-            average.coord.x /= groups[i].size();
-            average.coord.y /= groups[i].size();
-            average.coord.z /= groups[i].size();
-            average.num_blobs += groups[i].size(); // The number of blobs is the number of points in the group
-            average.state = 1;                     // Make it as interesting
-            result.seq._buffer[i] = average;
+            or_ColorTrack_PlateInfo target = findTargetPoint(groups[i]);
+            target.index = i;
+            target.num_blobs = groups[i].size();
+            target.state = 1;
+            result.seq._buffer[i] = target;
         }
 
         // Copy the result to the output
