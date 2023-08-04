@@ -10,12 +10,14 @@ module ColorTrack {
 
   struct PlateInfo {
     short index;
+    unsigned long num_blobs;
     PlateState state;
     or::t3d::pos coord;
   };
 
   struct PlateSequence{
     sequence<PlateInfo> seq;
+    octet num_interesing_spots;
   };
 
   // Color Information for blob detection

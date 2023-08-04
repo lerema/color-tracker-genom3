@@ -171,13 +171,13 @@ namespace Tracking
         return target;
     }
 
-    void nearestNeighbours(or_ColorTrack_PlateSequence *plates, float threshold)
+    void nearestNeighbours(or_ColorTrack_PlateSequence *all_detections, or_ColorTrack_PlateSequence *plates, float threshold)
     {
         // Convert the sequence to a vector
         std::vector<or_ColorTrack_PlateInfo> plates_vector;
-        for (size_t i = 0; i < plates->seq._length; ++i)
+        for (size_t i = 0; i < all_detections->seq._length; ++i)
         {
-            plates_vector.push_back(plates->seq._buffer[i]);
+            plates_vector.push_back(all_detections->seq._buffer[i]);
         }
 
         // Group the coordinates
@@ -194,7 +194,7 @@ namespace Tracking
             average.coord.x = 0;
             average.coord.y = 0;
             average.coord.z = 0;
-            average.index = groups[i][0].index;
+            average.index = i;
             for (size_t j = 0; j < groups[i].size(); ++j)
             {
                 average.coord.x += groups[i][j].coord.x;
@@ -204,7 +204,8 @@ namespace Tracking
             average.coord.x /= groups[i].size();
             average.coord.y /= groups[i].size();
             average.coord.z /= groups[i].size();
-            average.state = 1; // Make it as interesting
+            average.num_blobs += groups[i].size(); // The number of blobs is the number of points in the group
+            average.state = 1;                     // Make it as interesting
             result.seq._buffer[i] = average;
         }
 

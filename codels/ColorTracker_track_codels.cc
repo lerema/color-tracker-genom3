@@ -23,7 +23,10 @@ genom_event
 FetchPorts(const ColorTracker_Frame *Frame,
            const ColorTracker_Intrinsics *Intrinsics,
            const ColorTracker_Extrinsics *Extrinsics,
-           const ColorTracker_DronePose *DronePose, bool debug,
+           const ColorTracker_DronePose *DronePose,
+           or_ColorTrack_PlateSequence *plates,
+           or_ColorTrack_PlateSequence *all_detected_plates,
+           ColorTracker_BlobMap *blob_map, bool debug,
            const genom_context self)
 {
     // Check if all ports are connected and available
@@ -52,6 +55,40 @@ FetchPorts(const ColorTracker_Frame *Frame,
     {
         CODEL_LOG_INFO(2, 1, "All ports connected, fetching data");
     }
+
+    // Initialize plates info
+    if (genom_sequence_reserve(&(plates->seq), 15) == -1)
+    {
+        ColorTracker_e_OUT_OF_MEM_detail msg;
+        snprintf(msg.message, sizeof(msg.message), "%s", "Failed to reserve memory for plates");
+        // warnx("%s", msg.message);
+        return ColorTracker_e_OUT_OF_MEM(&msg, self);
+    }
+
+    if (genom_sequence_reserve(&(all_detected_plates->seq), 500000000) == -1)
+    {
+        ColorTracker_e_OUT_OF_MEM_detail msg;
+        snprintf(msg.message, sizeof(msg.message), "%s", "Failed to reserve memory for plates");
+        // warnx("%s", msg.message);
+        return ColorTracker_e_OUT_OF_MEM(&msg, self);
+    }
+
+    // Initialize blob map
+    blob_map->is_blobbed = false;
+    blob_map->grid_map.origin_x = 0.0;
+    blob_map->grid_map.origin_y = 0.0;
+    blob_map->grid_map.width = 10.0;
+    blob_map->grid_map.height = 10.0;
+    blob_map->grid_map.resolution = 0.1;
+    // for (int i = 0; i < blob_map->grid_map.width / blob_map->grid_map.resolution; i++)
+    // {
+    //   for (int j = 0; j < blob_map->grid_map.height / blob_map->grid_map.resolution; j++)
+    //   {
+    //     blob_map->grid_map.data[i][j] = 0;
+    //   }
+    // }
+    blob_map->index = 0;
+
     return ColorTracker_poll;
 }
 
@@ -72,9 +109,7 @@ FetchDataFromPorts(const ColorTracker_Frame *Frame,
                    or_sensor_frame *image_frame,
                    or_sensor_intrinsics *intrinsics,
                    or_sensor_extrinsics *extrinsics,
-                   or_pose_estimator_state *frame_pose,
-                   or_ColorTrack_PlateSequence *plates,
-                   ColorTracker_BlobMap *blob_map, bool debug,
+                   or_pose_estimator_state *frame_pose, bool debug,
                    const genom_context self)
 {
     or_sensor_frame *FrameData;
@@ -128,30 +163,6 @@ FetchDataFromPorts(const ColorTracker_Frame *Frame,
     *intrinsics = *IntrinsicsData;
     *extrinsics = *ExtrinsicsData;
 
-    // Initialize plates info
-    if (genom_sequence_reserve(&(plates->seq), 15) == -1)
-    {
-        ColorTracker_e_OUT_OF_MEM_detail msg;
-        snprintf(msg.message, sizeof(msg.message), "%s", "Failed to reserve memory for plates");
-        // warnx("%s", msg.message);
-        return ColorTracker_e_OUT_OF_MEM(&msg, self);
-    }
-
-    // Initialize blob map
-    blob_map->is_blobbed = false;
-    blob_map->grid_map.origin_x = 0.0;
-    blob_map->grid_map.origin_y = 0.0;
-    blob_map->grid_map.width = 10.0;
-    blob_map->grid_map.height = 10.0;
-    blob_map->grid_map.resolution = 0.1;
-    // for (int i = 0; i < blob_map->grid_map.width / blob_map->grid_map.resolution; i++)
-    // {
-    //   for (int j = 0; j < blob_map->grid_map.height / blob_map->grid_map.resolution; j++)
-    //   {
-    //     blob_map->grid_map.data[i][j] = 0;
-    //   }
-    // }
-    blob_map->index = 0;
     if (debug)
     {
         CODEL_LOG_INFO(2, 1, "Fetched new data...");
@@ -177,6 +188,7 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
             const ColorTracker_DronePose *DronePose,
             float distance_threshold,
             or_ColorTrack_PlateSequence *plates,
+            or_ColorTrack_PlateSequence *all_detected_plates,
             ColorTracker_BlobMap *blob_map, bool *new_findings,
             const ColorTracker_OccupancyGrid *OccupancyGrid,
             const ColorTracker_PlatesInfo *PlatesInfo, bool debug,
@@ -256,18 +268,19 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
         plate.coord.x = world_x + DronePoseData->pos._value.x;
         plate.coord.y = world_y + DronePoseData->pos._value.y;
         plate.coord.z = world_z + DronePoseData->pos._value.z;
-        plate.index = plates->seq._length + 1;
+        plate.index = all_detected_plates->seq._length + 1;
 
-        plates->seq._buffer[plates->seq._length] = plate;
-        plates->seq._length++;
+        all_detected_plates->seq._buffer[all_detected_plates->seq._length] = plate;
+        all_detected_plates->seq._length++;
 
         // Gather nearest neighbors to avoid duplicates
-        Tracking::nearestNeighbours(plates, distance_threshold);
+        Tracking::nearestNeighbours(all_detected_plates, plates, distance_threshold);
 
         // Plates info
         PlatesInfo->data(self)->seq._length = plates->seq._length;
         PlatesInfo->data(self)->seq._buffer = plates->seq._buffer;
         PlatesInfo->data(self)->seq._maximum = plates->seq._length;
+        PlatesInfo->data(self)->num_interesing_spots = plates->seq._length;
         PlatesInfo->write(self);
 
         *new_findings = true;

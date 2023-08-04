@@ -190,12 +190,13 @@ a|.Data structure
  * `struct ::or::ColorTrack::PlateSequence` `PlatesInfo`
  ** `sequence< struct ::or::ColorTrack::PlateInfo >` `seq`
  *** `short` `index`
- *** `short` `nb_images`
+ *** `unsigned long` `num_blobs`
  *** `enum ::or::ColorTrack::PlateState` `state` ∈ { `UNKNOWN`, `INTERESTING`, `TREATED`, `NOT_NTERESTING` }
  *** `struct ::or::t3d::pos` `coord`
  **** `double` `x`
  **** `double` `y`
  **** `double` `z`
+ ** `octet` `num_interesing_spots`
 
 |===
 
