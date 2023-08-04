@@ -255,13 +255,13 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
         }
 
         // Convert image coordinates to world coordinates
-        double world_x, world_y, world_z;
+        double world_x = 0.0, world_y = 0.0, world_z = 0.0;
         auto fx = intrinsics->calib.fx;
         auto fy = intrinsics->calib.fy;
         auto cx = intrinsics->calib.cx;
         auto cy = intrinsics->calib.cy;
         auto z = 0.0; // TODO: get from camera info & roi
-        Tracking::imageToWorld(image_x, image_y, world_x, world_y, world_z, fx, fy, cx, cy, z);
+        // Tracking::imageToWorld(image_x, image_y, world_x, world_y, world_z, fx, fy, cx, cy, z);
 
         // Convert relative world coordinates to absolute world coordinates
         or_ColorTrack_PlateInfo plate;

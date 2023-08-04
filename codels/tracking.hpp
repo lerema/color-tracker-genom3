@@ -57,18 +57,11 @@ namespace Tracking
         // delete *kernel;
         // delete *mask;
         // delete bgr;
-
-        if (debug)
-        {
-            cv::imshow("Image Mask", mask);
-            cv::imshow("Camera Image", image);
-            cv::waitKey(1);
-        }
         if (mA > 1000)
         {
             x = m10 / mA;
             y = m01 / mA;
-            cv::circle(image, cv::Point(x, y), 5, cv::Scalar(0, 0, 255), -1);
+            cv::circle(image, cv::Point(x, y), 5, cv::Scalar(0, 255, 255), -1);
         }
         else
         {
@@ -89,14 +82,41 @@ namespace Tracking
 
     void imageToWorld(double x, double y, double &xw, double &yw,
                       double &zw, double fx, double fy, double cx,
-                      double cy, double z)
+                      double cy, double z_ext)
     {
-        // TODO: Currently the conversion behaves more like a blob detected and returns the x, y and z of the reference directly
-        // xw = (x - cx) * z / fx;
-        // yw = (y - cy) * z / fy;
-        // zw = z;
+        // TODO: Currently there is a bug in this function. The world coordinates are not correct.
+        // Intrinsic parameters (camera matrix)
+        cv::Mat cameraMatrix = (cv::Mat_<double>(3, 3) << fx, 0, cx,
+                                0, fy, cy,
+                                0, 0, 1);
 
-        // Convert to world coordinates
+        // Extrinsic parameters (rotation and translation vectors)
+        cv::Mat rotationVec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
+        cv::Mat translationVec = (cv::Mat_<double>(3, 1) << 0, 0, z_ext);
+
+        // Image coordinates
+        cv::Mat imagePoint = (cv::Mat_<double>(1, 2) << x, y);
+
+        // Undistort image point (Optional: only if camera has distortion)
+        cv::Mat undistorted;
+        cv::Mat distCoeffs = cv::Mat(); // cv::Mat::zeros(4, 1, cv::DataType<double>::type);
+        cv::undistortPoints(cv::Mat(imagePoint), undistorted, cameraMatrix, distCoeffs);
+
+        // Convert image coordinates to normalized image coordinates (homogeneous coordinates)
+        cv::Mat imagePointHomogeneous = (cv::Mat_<double>(3, 1) << undistorted.at<double>(0, 0), undistorted.at<double>(0, 1), 1.0);
+
+        // Convert image coordinates to world coordinates
+        cv::Mat rotationMatrix;
+        cv::Rodrigues(rotationVec, rotationMatrix);
+        cv::Mat cameraMatrixInverse = cameraMatrix.inv();
+
+        cv::Mat worldPoint =
+            rotationMatrix.t() *
+            (cameraMatrixInverse * imagePointHomogeneous - translationVec);
+
+        xw = worldPoint.at<double>(0, 0);
+        yw = worldPoint.at<double>(1, 0);
+        zw = worldPoint.at<double>(2, 0);
     }
 
     // Function to calculate the distance between two coordinates
@@ -184,30 +204,10 @@ namespace Tracking
         std::vector<std::vector<or_ColorTrack_PlateInfo>> groups =
             groupCoordinates(plates_vector, threshold);
 
-        // Compute the average of each group
+        // Compute the target point for each group
         or_ColorTrack_PlateSequence result;
         result.seq._length = groups.size();
         result.seq._buffer = new or_ColorTrack_PlateInfo[result.seq._length];
-        // for (size_t i = 0; i < groups.size(); ++i)
-        // {
-        //     or_ColorTrack_PlateInfo average;
-        //     average.coord.x = 0;
-        //     average.coord.y = 0;
-        //     average.coord.z = 0;
-        //     average.index = i;
-        //     for (size_t j = 0; j < groups[i].size(); ++j)
-        //     {
-        //         average.coord.x += groups[i][j].coord.x;
-        //         average.coord.y += groups[i][j].coord.y;
-        //         average.coord.z += groups[i][j].coord.z;
-        //     }
-        //     average.coord.x /= groups[i].size();
-        //     average.coord.y /= groups[i].size();
-        //     average.coord.z /= groups[i].size();
-        //     average.num_blobs += groups[i].size(); // The number of blobs is
-        //     the number of points in the group average.state = 1; // Make it
-        //     as interesting result.seq._buffer[i] = average;
-        // }
         for (size_t i = 0; i < groups.size(); ++i)
         {
             or_ColorTrack_PlateInfo target = findTargetPoint(groups[i]);
