@@ -57,6 +57,13 @@ namespace Tracking
         // delete *kernel;
         // delete *mask;
         // delete bgr;
+        if (debug || show_frames)
+        {
+            cv::imshow("Image Mask", mask);
+            cv::imshow("Camera Image", image);
+            cv::waitKey(1);
+        }
+
         if (mA > 1000)
         {
             x = m10 / mA;
@@ -68,13 +75,6 @@ namespace Tracking
             x = -1;
             y = -1;
             return false;
-        }
-
-        if (debug || show_frames)
-        {
-            cv::imshow("Image Mask", mask);
-            cv::imshow("Camera Image", image);
-            cv::waitKey(1);
         }
 
         return true;

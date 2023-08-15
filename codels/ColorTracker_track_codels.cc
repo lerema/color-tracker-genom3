@@ -236,6 +236,7 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
             type,
             image_frame->pixels._buffer,
             cv::Mat::AUTO_STEP);
+        cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
     }
 
     is_object_found = Tracking::detectObject(image, color->b, color->g, color->r, color->threshold, image_x, image_y, debug, show_frames);
