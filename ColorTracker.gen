@@ -68,7 +68,7 @@ component ColorTracker {
     or_pose_estimator::state frame_pose;
 
     boolean debug, show_frames, start_tracking;
-    octet v_level;
+    octet verbose_level;
     float distance_threshold;
   };
 
@@ -130,51 +130,42 @@ component ColorTracker {
   };
 
   /* ------------------ SERVICE DEFINITION: Attributes -------------------- */
-
-
-  /* ------------------ SERVICE DEFINITION: Functions -------------------- */
-  function set_color(in or::ColorTrack::ColorInfo color_info =: "Color to be detected")
+  attribute set_color(in color =: "Color to be detected")
   {
     doc "Set the color to be detected.";
-    codel SetColor(local in color_info, ids out color);
-    throw e_OPENCV_ERROR;
   };
 
+  attribute set_debug(in debug =: "Debug mode")
+  {
+    doc "Set the debug mode.";
+  };
+
+  attribute set_distance_threshold(in distance_threshold =: "Distance threshold to sample the coordinates")
+  {
+    doc "Set the distance threshold to sample the coordinates using linear interpolation.";
+  };
+
+  attribute perform_tracking(in start_tracking =: "Start tracking the object")
+  {
+    doc "Start tracking the object.";
+  };
+
+  attribute set_verbose_level(in verbose_level =: "Verbose level")
+  {
+    doc "Set the verbose level.";
+  };
+
+  attribute show_image_frames(in show_frames =: "Show image frames")
+  {
+    doc "Show image frames.";
+  };
+
+  /* ------------------ SERVICE DEFINITION: Functions -------------------- */
   function set_map_size(in octet map_width =: "Estimated map width", in octet map_height =: "Estimated map height")
   {
     doc "Set the size of the map.";
     codel SetMapSize(local in map_width, local in map_height, ids out blob_map);
     throw e_BAD_OG_PORT;
-  };
-
-  function set_debug(in boolean is_debug_mode = FALSE : "Set debug mode (default: false)" ) {
-    doc "Set the debug mode.";
-    codel SetDebug(local in is_debug_mode, ids out debug);
-  };
-
-  function show_image_frames(in boolean show_cv_frames = FALSE : "Show image frames (default: false)" ) {
-    doc "Show image frames.";
-    codel ShowFrames(local in show_cv_frames, ids out show_frames);
-  };
-
-  function set_verbose_level(in octet verbose_level = 0 : "Verbose level") {
-    doc "Set the verbose level.";
-    codel SetVerboseLevel(local in verbose_level, ids out v_level);
-  };
-
-  function set_distance_threshold(in float tolerance = 0.5 : "Distance threshold to sample the coordinates (default: 0.5m))") {
-    doc "Set the distance threshold to sample the coordinates using linear interpolation.";
-    codel SetDistanceThreshold(local in tolerance, ids out distance_threshold);
-  };
-
-  function start_color_tracking() {
-    doc "Start tracking the object.";
-    codel SetStartTracking(ids out start_tracking);
-  };
-
-  function stop_color_tracking() {
-    doc "Stop tracking the object.";
-    codel SetStopTracking(ids out start_tracking);
   };
 
 };

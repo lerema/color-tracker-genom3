@@ -321,13 +321,13 @@ Detect the color and keep track of coordinates from the image.
 '''
 
 [[set_color]]
-=== set_color (function)
+=== set_color (attribute)
 
 [role="small", width="50%", float="right", cols="1"]
 |===
 a|.Inputs
 [disc]
- * `struct ::or::ColorTrack::ColorInfo` `color_info`: Color to be detected
+ * `struct ::or::ColorTrack::ColorInfo` `color`: Color to be detected
  ** `long` `r`
  ** `long` `g`
  ** `long` `b`
@@ -342,6 +342,81 @@ a|.Throws
 |===
 
 Set the color to be detected.
+
+'''
+
+[[set_debug]]
+=== set_debug (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `boolean` `debug` Debug mode
+
+|===
+
+Set the debug mode.
+
+'''
+
+[[set_distance_threshold]]
+=== set_distance_threshold (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `float` `distance_threshold` Distance threshold to sample the coordinates
+
+|===
+
+Set the distance threshold to sample the coordinates using linear interpolation.
+
+'''
+
+[[perform_tracking]]
+=== perform_tracking (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `boolean` `start_tracking` Start tracking the object
+
+|===
+
+Start tracking the object.
+
+'''
+
+[[set_verbose_level]]
+=== set_verbose_level (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `octet` `verbose_level` Verbose level
+
+|===
+
+Set the verbose level.
+
+'''
+
+[[show_image_frames]]
+=== show_image_frames (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `boolean` `show_frames` Show image frames
+
+|===
+
+Show image frames.
 
 '''
 
@@ -365,74 +440,6 @@ a|.Throws
 |===
 
 Set the size of the map.
-
-'''
-
-[[set_debug]]
-=== set_debug (function)
-
-[role="small", width="50%", float="right", cols="1"]
-|===
-a|.Inputs
-[disc]
- * `boolean` `is_debug_mode` (default `"0"`) Set debug mode (default: false)
-
-|===
-
-Set the debug mode.
-
-'''
-
-[[show_image_frames]]
-=== show_image_frames (function)
-
-[role="small", width="50%", float="right", cols="1"]
-|===
-a|.Inputs
-[disc]
- * `boolean` `show_cv_frames` (default `"0"`) Show image frames (default: false)
-
-|===
-
-Show image frames.
-
-'''
-
-[[set_verbose_level]]
-=== set_verbose_level (function)
-
-[role="small", width="50%", float="right", cols="1"]
-|===
-a|.Inputs
-[disc]
- * `octet` `verbose_level` (default `"0"`) Verbose level
-
-|===
-
-Set the verbose level.
-
-'''
-
-[[set_distance_threshold]]
-=== set_distance_threshold (function)
-
-[role="small", width="50%", float="right", cols="1"]
-|===
-a|.Inputs
-[disc]
- * `float` `tolerance` (default `"0.5"`) Distance threshold to sample the coordinates (default: 0.5m))
-
-|===
-
-Set the distance threshold to sample the coordinates using linear interpolation.
-
-'''
-
-[[start_color_tracking]]
-=== start_color_tracking (function)
-
-
-Start tracking the object.
 
 '''
 
