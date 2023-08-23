@@ -25,18 +25,23 @@
 #include <opencv2/core/types_c.h>
 
 #include "ColorTracker_c_types.h"
+#include "acColorTracker.h"
 
 using namespace std;
 
 namespace Tracking
 {
-    bool detectObject(cv::Mat &image, int b, int g, int r, int tolerance, double &x, double &y, bool debug = false, bool show_frames = false)
+    bool detectObject(cv::Mat &image, const or_ColorTrack_ColorInfo *color, double &x, double &y, cv::Rect &bounding_box, const bool debug = false, const bool show_frames = false)
     {
 
         // Create the mask &initialize it to white (no color detected)
         cv::Mat mask = cv::Mat(image.size(), image.type());
         // Create the thresholded image
         cv::Mat bgr = image.clone();
+        int b = color->b;
+        int g = color->g;
+        int r = color->r;
+        int tolerance = color->threshold;
 
         // We create the mask
         cv::inRange(bgr, cv::Scalar(b - tolerance, g - tolerance, r - tolerance), cv::Scalar(b + tolerance, g + tolerance, r + tolerance), mask);
@@ -54,21 +59,39 @@ namespace Tracking
         double m01 = m.m01;
         double mA = m.m00;
 
-        // delete *kernel;
-        // delete *mask;
-        // delete bgr;
-        if (debug || show_frames)
+        // Find contours and create a bounding box around the detected object
+        std::vector<std::vector<cv::Point>> contours;
+        std::vector<cv::Vec4i> hierarchy;
+        cv::findContours(mask, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+        // Find the largest contour
+        int largest_area = 0;
+        int largest_contour_index = 0;
+        for (int i = 0; i < contours.size(); i++)
         {
-            cv::imshow("Image Mask", mask);
-            cv::imshow("Camera Image", image);
-            cv::waitKey(1);
+            double a = cv::contourArea(contours[i], false);
+            if (a > largest_area)
+            {
+                largest_area = a;
+                largest_contour_index = i;
+                bounding_box = cv::boundingRect(contours[i]);
+            }
         }
 
+        // Draw the largest contour using the bounding rectangle
+        if (show_frames)
+        {
+            cv::Scalar color(255, 0, 0); // color of the contour in the
+            cv::drawContours(image, contours, largest_contour_index, color, 2, 8, hierarchy);
+            cv::rectangle(image, bounding_box, cv::Scalar(0, 255, 0), 1, 8, 0);
+        }
+
+        // Calculate the center of the object
         if (mA > 1000)
         {
             x = m10 / mA;
             y = m01 / mA;
-            cv::circle(image, cv::Point(x, y), 5, cv::Scalar(0, 255, 255), -1);
+            cv::circle(image, cv::Point(x, y), 5, cv::Scalar(255, 0, 0), -1);
         }
         else
         {
@@ -77,46 +100,65 @@ namespace Tracking
             return false;
         }
 
+        // Debug
+        if (show_frames)
+        {
+            cv::imshow("Image Mask", mask);
+            cv::imshow("Camera Image", image);
+            cv::waitKey(1);
+        }
+
         return true;
     }
 
-    void imageToWorld(double x, double y, double &xw, double &yw,
-                      double &zw, double fx, double fy, double cx,
-                      double cy, double z_ext)
+    void imageToWorldCoordinates(const int &image_x, const int &image_y, const cv::Rect bounding_box, const or_sensor_intrinsics *intrinsics, double object_width, double &xw, double &yw, double &zw)
     {
-        // TODO: Currently there is a bug in this function. The world coordinates are not correct.
-        // Intrinsic parameters (camera matrix)
-        cv::Mat cameraMatrix = (cv::Mat_<double>(3, 3) << fx, 0, cx,
-                                0, fy, cy,
-                                0, 0, 1);
+        // REF: https://stackoverflow.com/questions/12007775/to-calculate-world-coordinates-from-screen-coordinates-with-opencv
+        auto fx = intrinsics->calib.fx;
+        auto fy = intrinsics->calib.fy;
+        auto cx = intrinsics->calib.cx;
+        auto cy = intrinsics->calib.cy;
 
-        // Extrinsic parameters (rotation and translation vectors)
-        cv::Mat rotationVec = (cv::Mat_<double>(3, 1) << 0, 0, 0);
-        cv::Mat translationVec = (cv::Mat_<double>(3, 1) << 0, 0, z_ext);
+        // F = (P x D) / W
+        auto f = 480.0; // Fixed focal length for object of size 0.5m at 1m distance
+        // D’ = (W x F) / P
+        auto z = object_width * f / (bounding_box.width);
 
-        // Image coordinates
-        cv::Mat imagePoint = (cv::Mat_<double>(1, 2) << x, y);
+        // x_world = (x_screen - c_x) * z_world / f_x
+        // y_world = (y_screen - c_y) * z_world / f_y
 
-        // Undistort image point (Optional: only if camera has distortion)
-        cv::Mat undistorted;
-        cv::Mat distCoeffs = cv::Mat(); // cv::Mat::zeros(4, 1, cv::DataType<double>::type);
-        cv::undistortPoints(cv::Mat(imagePoint), undistorted, cameraMatrix, distCoeffs);
+        // This is calculated in Camera coordinate system
+        xw = (image_x - cx) * z / fx;
+        yw = (image_y - cy) * z / fy;
+        zw = z;
 
-        // Convert image coordinates to normalized image coordinates (homogeneous coordinates)
-        cv::Mat imagePointHomogeneous = (cv::Mat_<double>(3, 1) << undistorted.at<double>(0, 0), undistorted.at<double>(0, 1), 1.0);
+        // Extrinsics matrix is considered to be identity, so we can directly use the camera coordinates
+    }
 
-        // Convert image coordinates to world coordinates
-        cv::Mat rotationMatrix;
-        cv::Rodrigues(rotationVec, rotationMatrix);
-        cv::Mat cameraMatrixInverse = cameraMatrix.inv();
+    void getRotationMatrix(const double roll, const double pitch, const double yaw, cv::Mat R)
+    {
+        // Create the rotation matrix
+        cv::Mat R_x = (cv::Mat_<double>(3, 3) << 1, 0, 0,
+                       0, cos(roll), -sin(roll),
+                       0, sin(roll), cos(roll));
+        cv::Mat R_y = (cv::Mat_<double>(3, 3) << cos(pitch), 0, sin(pitch),
+                       0, 1, 0,
+                       -sin(pitch), 0, cos(pitch));
+        cv::Mat R_z = (cv::Mat_<double>(3, 3) << cos(yaw), -sin(yaw), 0,
+                       sin(yaw), cos(yaw), 0,
+                       0, 0, 1);
 
-        cv::Mat worldPoint =
-            rotationMatrix.t() *
-            (cameraMatrixInverse * imagePointHomogeneous - translationVec);
+        // Combined rotation matrix
+        R = R_z * R_y * R_x;
+    }
 
-        xw = worldPoint.at<double>(0, 0);
-        yw = worldPoint.at<double>(1, 0);
-        zw = worldPoint.at<double>(2, 0);
+    void getTranslationMatrix(const optional_or_t3d_pos drone_position, cv::Mat T)
+    {
+        // Create the translation matrix
+        if (drone_position._present)
+            T = (cv::Mat_<double>(3, 1) << drone_position._value.x, drone_position._value.y, drone_position._value.z);
+        else
+            T = (cv::Mat_<double>(3, 1) << 0, 0, 0);
     }
 
     // Function to calculate the distance between two coordinates

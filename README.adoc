@@ -420,6 +420,23 @@ Show image frames.
 
 '''
 
+[[set_object_size]]
+=== set_object_size (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `float` `object_width` Object width
+
+ * `float` `object_height` Object height
+
+|===
+
+Set the size of the object.
+
+'''
+
 [[set_map_size]]
 === set_map_size (function)
 

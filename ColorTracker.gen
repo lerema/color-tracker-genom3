@@ -69,7 +69,7 @@ component ColorTracker {
 
     boolean debug, show_frames, start_tracking;
     octet verbose_level;
-    float distance_threshold;
+    float distance_threshold, object_width, object_height;
   };
 
   /* ------------- DEFINITION OF PORTS -------------- */
@@ -109,7 +109,7 @@ component ColorTracker {
 
   activity color_track() {
     doc "Detect the color and keep track of coordinates from the image.";
-    after set_color, set_distance_threshold;
+    after set_color, set_distance_threshold, set_object_size;
     task track;
 
     codel <start> FetchPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose, 
@@ -118,7 +118,7 @@ component ColorTracker {
     codel <poll> FetchDataFromPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose,
           ids out image_frame, ids out intrinsics, ids out extrinsics, ids out frame_pose, ids in debug)
           yield pause::poll, main, ether;
-    codel <main> TrackObject(ids in start_tracking, ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color,
+    codel <main> TrackObject(ids in start_tracking, ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids in object_width, ids in object_height,
           port in DronePose, ids in distance_threshold, ids out plates, ids inout all_detected_plates,
           ids out blob_map, ids out new_findings, port out OccupancyGrid, port out PlatesInfo, ids in debug, ids in show_frames)
           yield main, poll, publish, ether;
@@ -158,6 +158,11 @@ component ColorTracker {
   attribute show_image_frames(in show_frames =: "Show image frames")
   {
     doc "Show image frames.";
+  };
+
+  attribute set_object_size(in object_width =: "Object width", in object_height =: "Object height")
+  {
+    doc "Set the size of the object.";
   };
 
   /* ------------------ SERVICE DEFINITION: Functions -------------------- */

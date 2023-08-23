@@ -163,11 +163,6 @@ FetchDataFromPorts(const ColorTracker_Frame *Frame,
     *intrinsics = *IntrinsicsData;
     *extrinsics = *ExtrinsicsData;
 
-    if (debug)
-    {
-        CODEL_LOG_INFO(2, 1, "Fetched new data...");
-    }
-
     return ColorTracker_main;
 }
 
@@ -184,7 +179,8 @@ genom_event
 TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
             const or_sensor_intrinsics *intrinsics,
             const or_sensor_extrinsics *extrinsics,
-            const or_ColorTrack_ColorInfo *color,
+            const or_ColorTrack_ColorInfo *color, float object_width,
+            float object_height,
             const ColorTracker_DronePose *DronePose,
             float distance_threshold,
             or_ColorTrack_PlateSequence *plates,
@@ -239,10 +235,16 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
         cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
     }
 
-    is_object_found = Tracking::detectObject(image, color->b, color->g, color->r, color->threshold, image_x, image_y, debug, show_frames);
+    cv::Rect bounding_box;
+    is_object_found = Tracking::detectObject(image, color, image_x, image_y, bounding_box, debug, show_frames);
 
     if (is_object_found)
     {
+        if (debug)
+        {
+            CODEL_LOG_INFO(2, 1, "Object found at (%f, %f)", image_x, image_y);
+        }
+
         // Check if the drone position is fetched
         or_pose_estimator_state *DronePoseData;
         DronePoseData = DronePose->data(self);
@@ -257,18 +259,36 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
 
         // Convert image coordinates to world coordinates
         double world_x = 0.0, world_y = 0.0, world_z = 0.0;
-        auto fx = intrinsics->calib.fx;
-        auto fy = intrinsics->calib.fy;
-        auto cx = intrinsics->calib.cx;
-        auto cy = intrinsics->calib.cy;
-        auto z = 0.0; // TODO: get from camera info & roi
-        // Tracking::imageToWorld(image_x, image_y, world_x, world_y, world_z, fx, fy, cx, cy, z);
+        Tracking::imageToWorldCoordinates(image_x, image_y, bounding_box, intrinsics, object_width, world_x, world_y, world_z);
+
+        // Transform the coordinates from camera frame to world frame given the drone pose
+        // NOTE: Pom doesn't provide the rotation matrix, so we have to calculate it based on an assumption
+        cv::Mat R = cv::Mat::zeros(3, 3, CV_64F);
+        cv::Mat t = cv::Mat::zeros(3, 1, CV_64F);
+        double roll = 0.0, pitch = 3.14, yaw = 0.0;
+        Tracking::getRotationMatrix(roll, pitch, yaw, R);
+        t = (cv::Mat_<double>(3, 1) << DronePoseData->pos._value.x, DronePoseData->pos._value.y, DronePoseData->pos._value.z);
+
+        cv::Mat world_coord = cv::Mat::zeros(3, 1, CV_64F);
+        cv::Mat camera_coord = cv::Mat::zeros(3, 1, CV_64F);
+        camera_coord.at<double>(0, 0) = world_x;
+        camera_coord.at<double>(1, 0) = world_y;
+        camera_coord.at<double>(2, 0) = world_z;
+
+        world_coord = R * camera_coord + t;
+
+        if (debug)
+        {
+            CODEL_LOG_WARNING("World coordinates: (%f, %f, %f)", world_coord.at<double>(0, 0), world_coord.at<double>(1, 0), world_coord.at<double>(2, 0));
+            CODEL_LOG_WARNING("Translation: (%f, %f, %f)", t.at<double>(0, 0), t.at<double>(1, 0), t.at<double>(2, 0));
+            CODEL_LOG_WARNING("Rotation: (%f, %f, %f)", R.at<double>(0, 0), R.at<double>(0, 1), R.at<double>(0, 2));
+        }
 
         // Convert relative world coordinates to absolute world coordinates
         or_ColorTrack_PlateInfo plate;
-        plate.coord.x = world_x + DronePoseData->pos._value.x;
-        plate.coord.y = world_y + DronePoseData->pos._value.y;
-        plate.coord.z = world_z + DronePoseData->pos._value.z;
+        plate.coord.x = world_coord.at<double>(0, 0);
+        plate.coord.y = world_coord.at<double>(1, 0);
+        plate.coord.z = world_coord.at<double>(2, 0);
         plate.index = all_detected_plates->seq._length + 1;
 
         all_detected_plates->seq._buffer[all_detected_plates->seq._length] = plate;
