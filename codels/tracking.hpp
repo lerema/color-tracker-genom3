@@ -42,6 +42,7 @@ namespace Tracking
         int g = color->g;
         int r = color->r;
         int tolerance = color->threshold;
+        bool object_found = false;
 
         // We create the mask
         cv::inRange(bgr, cv::Scalar(b - tolerance, g - tolerance, r - tolerance), cv::Scalar(b + tolerance, g + tolerance, r + tolerance), mask);
@@ -92,12 +93,13 @@ namespace Tracking
             x = m10 / mA;
             y = m01 / mA;
             cv::circle(image, cv::Point(x, y), 5, cv::Scalar(255, 0, 0), -1);
+            object_found = true;
         }
         else
         {
             x = -1;
             y = -1;
-            return false;
+            object_found = false;
         }
 
         // Debug
@@ -108,7 +110,7 @@ namespace Tracking
             cv::waitKey(1);
         }
 
-        return true;
+        return object_found;
     }
 
     void imageToWorldCoordinates(const int &image_x, const int &image_y, const double &f, const cv::Rect bounding_box, const or_sensor_intrinsics *intrinsics, double object_width, double &xw, double &yw, double &zw)
@@ -128,15 +130,27 @@ namespace Tracking
         // y_world = (y_screen - c_y) * z_world / f_y
 
         // This is calculated in Camera coordinate system
-        xw = (image_x - cx) * z / fx;
-        yw = (image_y - cy) * z / fy;
-        zw = z;
+        auto xw_tmp = (image_x - cx) * z / fx;
+        auto yw_tmp = (image_y - cy) * z / fy;
+        auto zw_tmp = z;
 
         // Extrinsics matrix is considered to be identity, so we can directly use the camera coordinates
+        // X axis of camera is -Y axis of drone
+        // Y axis of camera is -X axis of drone
+        // Z axis of camera is -Z axis of drone
+        xw = -yw_tmp;
+        yw = -xw_tmp;
+        zw = -zw_tmp;
     }
 
-    void getRotationMatrix(const double roll, const double pitch, const double yaw, cv::Mat R)
+    void getRotationMatrix(const cv::Mat quaternion, cv::Mat R)
     {
+        // Convert the quaternion to euler angles
+        double roll, pitch, yaw;
+        roll = atan2(2 * (quaternion.at<double>(0) * quaternion.at<double>(1) + quaternion.at<double>(2) * quaternion.at<double>(3)), 1 - 2 * (quaternion.at<double>(1) * quaternion.at<double>(1) + quaternion.at<double>(2) * quaternion.at<double>(2)));
+        pitch = asin(2 * (quaternion.at<double>(0) * quaternion.at<double>(2) - quaternion.at<double>(3) * quaternion.at<double>(1)));
+        yaw = atan2(2 * (quaternion.at<double>(0) * quaternion.at<double>(3) + quaternion.at<double>(1) * quaternion.at<double>(2)), 1 - 2 * (quaternion.at<double>(2) * quaternion.at<double>(2) + quaternion.at<double>(3) * quaternion.at<double>(3)));
+
         // Create the rotation matrix
         cv::Mat R_x = (cv::Mat_<double>(3, 3) << 1, 0, 0,
                        0, cos(roll), -sin(roll),

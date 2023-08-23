@@ -47,83 +47,23 @@ SetMapSize(uint8_t map_width, uint8_t map_height,
     return genom_ok;
 }
 
-/* --- Function set_debug ----------------------------------------------- */
+/* --- Function clear_findins ------------------------------------------- */
 
-/** Codel SetDebug of function set_debug.
+/** Codel ClearFindings of function clear_findins.
  *
  * Returns genom_ok.
+ * Throws ColorTracker_e_OUT_OF_MEM.
  */
 genom_event
-SetDebug(bool is_debug_mode, bool *debug, const genom_context self)
+ClearFindings(or_ColorTrack_PlateSequence *all_detected_plates,
+              const genom_context self)
 {
-    *debug = is_debug_mode;
-    return genom_ok;
-}
-
-/* --- Function show_image_frames --------------------------------------- */
-
-/** Codel ShowFrames of function show_image_frames.
- *
- * Returns genom_ok.
- */
-genom_event
-ShowFrames(bool show_cv_frames, bool *show_frames,
-           const genom_context self)
-{
-    *show_frames = show_cv_frames;
-    return genom_ok;
-}
-
-/* --- Function set_verbose_level --------------------------------------- */
-
-/** Codel SetVerboseLevel of function set_verbose_level.
- *
- * Returns genom_ok.
- */
-genom_event
-SetVerboseLevel(uint8_t verbose_level, uint8_t *v_level,
-                const genom_context self)
-{
-    *v_level = verbose_level;
-    return genom_ok;
-}
-
-/* --- Function set_distance_threshold ---------------------------------- */
-
-/** Codel SetDistanceThreshold of function set_distance_threshold.
- *
- * Returns genom_ok.
- */
-genom_event
-SetDistanceThreshold(float tolerance, float *distance_threshold,
-                     const genom_context self)
-{
-    *distance_threshold = tolerance;
-    return genom_ok;
-}
-
-/* --- Function start_color_tracking ------------------------------------ */
-
-/** Codel SetStartTracking of function start_color_tracking.
- *
- * Returns genom_ok.
- */
-genom_event
-SetStartTracking(bool *start_tracking, const genom_context self)
-{
-    *start_tracking = true;
-    return genom_ok;
-}
-
-/* --- Function stop_color_tracking ------------------------------------- */
-
-/** Codel SetStopTracking of function stop_color_tracking.
- *
- * Returns genom_ok.
- */
-genom_event
-SetStopTracking(bool *start_tracking, const genom_context self)
-{
-    *start_tracking = false;
+    for (int i = 0; i < all_detected_plates->seq._length; i++)
+    {
+        or_ColorTrack_PlateInfo *plate = &all_detected_plates->seq._buffer[i];
+        delete plate;
+    }
+    all_detected_plates->seq._length = 0;
+    all_detected_plates->seq._maximum = 0;
     return genom_ok;
 }

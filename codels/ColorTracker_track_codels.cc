@@ -257,23 +257,28 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
             return ColorTracker_e_BAD_POSE_PORT(&msg, self);
         }
 
-        // Convert image coordinates to world coordinates
-        double world_x = 0.0, world_y = 0.0, world_z = 0.0;
-        Tracking::imageToWorldCoordinates(image_x, image_y, focal_length, bounding_box, intrinsics, object_width, world_x, world_y, world_z);
+        // Convert pixel coordinates to cartesian coordinates
+        double camera_x = 0.0, camera_y = 0.0, camera_z = 0.0;
+        Tracking::imageToWorldCoordinates(image_x, image_y, focal_length, bounding_box, intrinsics, object_width, camera_x, camera_y, camera_z);
 
         // Transform the coordinates from camera frame to world frame given the drone pose
         // NOTE: Pom doesn't provide the rotation matrix, so we have to calculate it based on an assumption
         cv::Mat R = cv::Mat::zeros(3, 3, CV_64F);
         cv::Mat t = cv::Mat::zeros(3, 1, CV_64F);
+        cv::Mat q = cv::Mat::zeros(4, 1, CV_64F);
+        q.at<double>(0, 0) = DronePoseData->att._value.qx;
+        q.at<double>(1, 0) = DronePoseData->att._value.qy;
+        q.at<double>(2, 0) = DronePoseData->att._value.qz;
+        q.at<double>(3, 0) = DronePoseData->att._value.qw;
         double roll = 0.0, pitch = 3.14, yaw = 0.0;
-        Tracking::getRotationMatrix(roll, pitch, yaw, R);
+        Tracking::getRotationMatrix(q, R);
         t = (cv::Mat_<double>(3, 1) << DronePoseData->pos._value.x, DronePoseData->pos._value.y, DronePoseData->pos._value.z);
 
         cv::Mat world_coord = cv::Mat::zeros(3, 1, CV_64F);
         cv::Mat camera_coord = cv::Mat::zeros(3, 1, CV_64F);
-        camera_coord.at<double>(0, 0) = world_x;
-        camera_coord.at<double>(1, 0) = world_y;
-        camera_coord.at<double>(2, 0) = world_z;
+        camera_coord.at<double>(0, 0) = camera_x;
+        camera_coord.at<double>(1, 0) = camera_y;
+        camera_coord.at<double>(2, 0) = camera_z;
 
         world_coord = R * camera_coord + t;
 

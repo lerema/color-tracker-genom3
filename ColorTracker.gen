@@ -178,4 +178,11 @@ component ColorTracker {
     throw e_BAD_OG_PORT;
   };
 
+  function clear_findins()
+  {
+    doc "Clear the findings.";
+    codel ClearFindings(ids inout all_detected_plates);
+    throw e_OUT_OF_MEM;
+  };
+
 };

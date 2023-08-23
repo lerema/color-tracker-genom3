@@ -320,6 +320,36 @@ Detect the color and keep track of coordinates from the image.
 
 '''
 
+[[clear_findings]]
+=== clear_findings (activity)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Throws
+[disc]
+ * `exception ::ColorTracker::e_OUT_OF_MEM`
+ ** `short` `code`
+ ** `string<128>` `message`
+
+ * `exception ::ColorTracker::e_BAD_IMAGE_PORT`
+ ** `short` `code`
+ ** `string<128>` `message`
+
+ * `exception ::ColorTracker::e_BAD_TARGET_PORT`
+ ** `short` `code`
+ ** `string<128>` `message`
+
+a|.Context
+[disc]
+  * In task `<<track>>`
+  (frequency 10.0 _Hz_)
+  * Updates port `<<PlatesInfo>>`
+|===
+
+Clear the found plates sequence.
+
+'''
+
 [[set_color]]
 === set_color (attribute)
 
@@ -452,6 +482,21 @@ Set the focal length of the object at 1 m.
 
 '''
 
+[[clear_findings]]
+=== clear_findings (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `boolean` `clear_findings` Clear the findings of plates
+
+|===
+
+Clear the plates info findings.
+
+'''
+
 [[set_map_size]]
 === set_map_size (function)
 
@@ -475,11 +520,20 @@ Set the size of the map.
 
 '''
 
-[[stop_color_tracking]]
-=== stop_color_tracking (function)
+[[clear_findins]]
+=== clear_findins (function)
 
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Throws
+[disc]
+ * `exception ::ColorTracker::e_OUT_OF_MEM`
+ ** `short` `code`
+ ** `string<128>` `message`
 
-Stop tracking the object.
+|===
+
+Clear the findings.
 
 '''
 
