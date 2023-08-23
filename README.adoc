@@ -437,6 +437,21 @@ Set the size of the object.
 
 '''
 
+[[set_focal_length]]
+=== set_focal_length (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `float` `focal_length` Focal length of the object at a distance of 1 meter
+
+|===
+
+Set the focal length of the object at 1 m.
+
+'''
+
 [[set_map_size]]
 === set_map_size (function)
 

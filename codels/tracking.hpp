@@ -111,7 +111,7 @@ namespace Tracking
         return true;
     }
 
-    void imageToWorldCoordinates(const int &image_x, const int &image_y, const cv::Rect bounding_box, const or_sensor_intrinsics *intrinsics, double object_width, double &xw, double &yw, double &zw)
+    void imageToWorldCoordinates(const int &image_x, const int &image_y, const double &f, const cv::Rect bounding_box, const or_sensor_intrinsics *intrinsics, double object_width, double &xw, double &yw, double &zw)
     {
         // REF: https://stackoverflow.com/questions/12007775/to-calculate-world-coordinates-from-screen-coordinates-with-opencv
         auto fx = intrinsics->calib.fx;
@@ -120,7 +120,7 @@ namespace Tracking
         auto cy = intrinsics->calib.cy;
 
         // F = (P x D) / W
-        auto f = 480.0; // Fixed focal length for object of size 0.5m at 1m distance
+        // auto f = 480.0; // Fixed focal length for object of size 0.5m at 1m distance
         // D’ = (W x F) / P
         auto z = object_width * f / (bounding_box.width);
 

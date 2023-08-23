@@ -180,7 +180,7 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
             const or_sensor_intrinsics *intrinsics,
             const or_sensor_extrinsics *extrinsics,
             const or_ColorTrack_ColorInfo *color, float object_width,
-            float object_height,
+            float object_height, float focal_length,
             const ColorTracker_DronePose *DronePose,
             float distance_threshold,
             or_ColorTrack_PlateSequence *plates,
@@ -259,7 +259,7 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
 
         // Convert image coordinates to world coordinates
         double world_x = 0.0, world_y = 0.0, world_z = 0.0;
-        Tracking::imageToWorldCoordinates(image_x, image_y, bounding_box, intrinsics, object_width, world_x, world_y, world_z);
+        Tracking::imageToWorldCoordinates(image_x, image_y, focal_length, bounding_box, intrinsics, object_width, world_x, world_y, world_z);
 
         // Transform the coordinates from camera frame to world frame given the drone pose
         // NOTE: Pom doesn't provide the rotation matrix, so we have to calculate it based on an assumption
