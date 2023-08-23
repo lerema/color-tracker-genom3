@@ -273,6 +273,11 @@ namespace Tracking
             result.seq._buffer[i] = target;
         }
 
+        // Filter the results which by condering only top 20% of the results
+        std::sort(result.seq._buffer, result.seq._buffer + result.seq._length, [](const or_ColorTrack_PlateInfo &a, const or_ColorTrack_PlateInfo &b)
+                  { return a.num_blobs > b.num_blobs; });
+        result.seq._length = std::ceil(result.seq._length * 0.2);
+
         // Copy the result to the output
         *plates = result;
     };
