@@ -318,7 +318,7 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
     }
 
     // Publish the detected frame
-    std::vector<uchar> compressed;
+    std::vector<uint8_t> compressed;
     std::vector<int> compression_params;
     compression_params.push_back(cv::IMWRITE_JPEG_QUALITY);
     compression_params.push_back(0.5);
@@ -330,7 +330,7 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
     output->data(self)->bpp = 3;
     output->data(self)->compressed = true;
     output->data(self)->pixels._length = compressed.size();
-    output->data(self)->pixels._buffer = compressed.data();
+    memcpy(output->data(self)->pixels._buffer, compressed.data(), compressed.size());
     output->data(self)->ts.sec = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     output->data(self)->ts.nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count() % 1000000000;
     output->write(self);
