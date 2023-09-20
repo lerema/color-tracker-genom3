@@ -187,7 +187,8 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
             or_ColorTrack_PlateSequence *all_detected_plates,
             ColorTracker_BlobMap *blob_map, bool *new_findings,
             const ColorTracker_OccupancyGrid *OccupancyGrid,
-            const ColorTracker_PlatesInfo *PlatesInfo, bool debug,
+            const ColorTracker_PlatesInfo *PlatesInfo,
+            const ColorTracker_output *output, bool debug,
             bool show_frames, const genom_context self)
 {
 
@@ -315,6 +316,24 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
     {
         *new_findings = false;
     }
+
+    // Publish the detected frame
+    std::vector<uchar> compressed;
+    std::vector<int> compression_params;
+    compression_params.push_back(cv::IMWRITE_JPEG_QUALITY);
+    compression_params.push_back(0.5);
+
+    cv::imencode(".jpg", image, compressed, compression_params);
+
+    output->data(self)->width = image.cols;
+    output->data(self)->height = image.rows;
+    output->data(self)->bpp = 3;
+    output->data(self)->compressed = true;
+    output->data(self)->pixels._length = compressed.size();
+    output->data(self)->pixels._buffer = compressed.data();
+    output->data(self)->ts.sec = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    output->data(self)->ts.nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count() % 1000000000;
+    output->write(self);
 
     return ColorTracker_poll;
 }

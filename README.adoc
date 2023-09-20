@@ -255,22 +255,31 @@ a|.Data structure
 
 '''
 
-== Services
+[[output]]
+=== output (out)
 
-[[set_debug]]
-=== set_debug (attribute)
 
 [role="small", width="50%", float="right", cols="1"]
 |===
-a|.Inputs
+a|.Data structure
 [disc]
- * `boolean` `debug`
+ * `struct ::or::sensor::frame` `output`
+ ** `struct ::or::time::ts` `ts`
+ *** `long` `sec`
+ *** `long` `nsec`
+ ** `boolean` `compressed`
+ ** `unsigned short` `height`
+ ** `unsigned short` `width`
+ ** `unsigned short` `bpp`
+ ** `sequence< octet >` `pixels`
 
 |===
 
-Set the debug mode.
+The image frame with the detected object.
 
 '''
+
+== Services
 
 [[color_track]]
 === color_track (activity)
@@ -313,6 +322,7 @@ a|.Context
   * Reads port `<<Extrinsics>>`
   * Updates port `<<OccupancyGrid>>`
   * Updates port `<<PlatesInfo>>`
+  * Updates port `<<output>>`
   * Interrupts `<<color_track>>`
 |===
 

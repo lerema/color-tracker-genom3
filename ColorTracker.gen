@@ -95,6 +95,9 @@ component ColorTracker {
   }; // The plates sequence
 
   port out or_rigid_body::state TargetPose;
+  port out or::sensor::frame output {
+    doc "The image frame with the detected object.";
+  };
 
 
   /* ------------------ TASK DEFINITION -------------------- */
@@ -120,7 +123,7 @@ component ColorTracker {
           yield pause::poll, main, ether;
     codel <main> TrackObject(ids in start_tracking, ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids in object_width, ids in object_height, ids in focal_length,
           port in DronePose, ids in distance_threshold, ids out plates, ids inout all_detected_plates,
-          ids out blob_map, ids out new_findings, port out OccupancyGrid, port out PlatesInfo, ids in debug, ids in show_frames)
+          ids out blob_map, ids out new_findings, port out OccupancyGrid, port out PlatesInfo, port out output, ids in debug, ids in show_frames)
           yield main, poll, publish, ether;
     codel <publish> PublishOG(ids in blob_map, port out OccupancyGrid)
           yield main, ether;
