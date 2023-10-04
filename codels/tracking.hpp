@@ -31,16 +31,15 @@ using namespace std;
 
 namespace Tracking
 {
-    bool detectObject(cv::Mat &image, const or_ColorTrack_ColorInfo *color, double &x, double &y, cv::Rect &bounding_box, const bool debug = false, const bool show_frames = false)
+    bool detectObject(cv::Mat &image, cv::Mat &mask, const or_ColorTrack_ColorInfo *color, double &x, double &y, cv::Rect &bounding_box, const bool debug = false, const bool show_frames = false)
     {
 
         // Create the mask &initialize it to white (no color detected)
-        cv::Mat mask = cv::Mat(image.size(), image.type());
         // Create the thresholded image
         cv::Mat bgr = image.clone();
-        int b = color->b;
+        int b = color->r;
         int g = color->g;
-        int r = color->r;
+        int r = color->b;
         int tolerance = color->threshold;
         bool object_found = false;
 

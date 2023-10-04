@@ -95,15 +95,18 @@ component ColorTracker {
   }; // The plates sequence
 
   port out or_rigid_body::state TargetPose;
-  port out or::sensor::frame output {
+  port multiple out or::sensor::frame output {
     doc "The image frame with the detected object.";
   };
-
+  
 
   /* ------------------ TASK DEFINITION -------------------- */
   task track {
     period 100 ms;
     doc "Track the object in the image.";
+
+    codel <start> InitPort(port out output)
+      yield ether;
 
     throw e_OUT_OF_MEM, e_BAD_IMAGE_PORT;
   };

@@ -9,6 +9,21 @@
 
 /* --- Task track ------------------------------------------------------- */
 
+/** Codel InitPort of task track.
+ *
+ * Triggered by ColorTracker_start.
+ * Yields to ColorTracker_ether.
+ * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT.
+ */
+genom_event
+InitPort(const ColorTracker_output *output, const genom_context self)
+{
+    output->open("frame", self);
+    output->open("mask", self);
+
+    return ColorTracker_ether;
+}
+
 /* --- Activity color_track --------------------------------------------- */
 
 /** Codel FetchPorts of activity color_track.
@@ -51,11 +66,6 @@ FetchPorts(const ColorTracker_Frame *Frame,
         return ColorTracker_pause_start;
     }
 
-    if (debug)
-    {
-        CODEL_LOG_INFO(2, 1, "All ports connected, fetching data");
-    }
-
     // Initialize plates info
     if (genom_sequence_reserve(&(plates->seq), 15) == -1)
     {
@@ -65,7 +75,7 @@ FetchPorts(const ColorTracker_Frame *Frame,
         return ColorTracker_e_OUT_OF_MEM(&msg, self);
     }
 
-    if (genom_sequence_reserve(&(all_detected_plates->seq), 500000000) == -1)
+    if (genom_sequence_reserve(&(all_detected_plates->seq), 5000000) == -1)
     {
         ColorTracker_e_OUT_OF_MEM_detail msg;
         snprintf(msg.message, sizeof(msg.message), "%s", "Failed to reserve memory for plates");
@@ -88,6 +98,11 @@ FetchPorts(const ColorTracker_Frame *Frame,
     //   }
     // }
     blob_map->index = 0;
+
+    if (debug)
+    {
+        CODEL_LOG_INFO(2, 1, "All ports connected, fetching data");
+    }
 
     return ColorTracker_poll;
 }
@@ -233,11 +248,33 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
             type,
             image_frame->pixels._buffer,
             cv::Mat::AUTO_STEP);
-        cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
+        // cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
     }
 
     cv::Rect bounding_box;
-    is_object_found = Tracking::detectObject(image, color, image_x, image_y, bounding_box, debug, show_frames);
+    cv::Mat mask = cv::Mat(image.size(), image.type());
+    is_object_found = Tracking::detectObject(image, mask, color, image_x, image_y, bounding_box, debug, show_frames);
+
+    // Publish the detected frame
+    output->data("frame", self)->width = image.cols;
+    output->data("frame", self)->height = image.rows;
+    output->data("frame", self)->bpp = 3;
+    output->data("frame", self)->compressed = false;
+    output->data("frame", self)->pixels._buffer = image.data;
+    output->data("frame", self)->pixels._length = image.cols * image.rows * 3;
+    output->data("frame", self)->ts.sec = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    output->data("frame", self)->ts.nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count() % 1000000000;
+    output->write("frame", self);
+
+    output->data("mask", self)->width = mask.cols;
+    output->data("mask", self)->height = mask.rows;
+    output->data("mask", self)->bpp = 1;
+    output->data("mask", self)->compressed = false;
+    output->data("mask", self)->pixels._buffer = mask.data;
+    output->data("mask", self)->pixels._length = mask.cols * mask.rows;
+    output->data("mask", self)->ts.sec = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    output->data("mask", self)->ts.nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count() % 1000000000;
+    output->write("mask", self);
 
     if (is_object_found)
     {
@@ -315,25 +352,11 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
     else
     {
         *new_findings = false;
+        if (debug)
+        {
+            CODEL_LOG_WARNING("Object not found");
+        }
     }
-
-    // Publish the detected frame
-    std::vector<uint8_t> compressed;
-    std::vector<int> compression_params;
-    compression_params.push_back(cv::IMWRITE_JPEG_QUALITY);
-    compression_params.push_back(0.5);
-
-    cv::imencode(".jpg", image, compressed, compression_params);
-
-    output->data(self)->width = image.cols;
-    output->data(self)->height = image.rows;
-    output->data(self)->bpp = 3;
-    output->data(self)->compressed = true;
-    output->data(self)->pixels._length = compressed.size();
-    memcpy(output->data(self)->pixels._buffer, compressed.data(), compressed.size());
-    output->data(self)->ts.sec = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    output->data(self)->ts.nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count() % 1000000000;
-    output->write(self);
 
     return ColorTracker_poll;
 }

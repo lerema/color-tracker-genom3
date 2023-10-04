@@ -256,7 +256,7 @@ a|.Data structure
 '''
 
 [[output]]
-=== output (out)
+=== output (multiple out)
 
 
 [role="small", width="50%", float="right", cols="1"]
@@ -276,6 +276,30 @@ a|.Data structure
 |===
 
 The image frame with the detected object.
+
+'''
+
+[[mask]]
+=== mask (out)
+
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Data structure
+[disc]
+ * `struct ::or::sensor::frame` `mask`
+ ** `struct ::or::time::ts` `ts`
+ *** `long` `sec`
+ *** `long` `nsec`
+ ** `boolean` `compressed`
+ ** `unsigned short` `height`
+ ** `unsigned short` `width`
+ ** `unsigned short` `bpp`
+ ** `sequence< octet >` `pixels`
+
+|===
+
+The color of the object to track.
 
 '''
 
@@ -323,7 +347,7 @@ a|.Context
   * Updates port `<<OccupancyGrid>>`
   * Updates port `<<PlatesInfo>>`
   * Updates port `<<output>>`
-  * Interrupts `<<color_track>>`
+    * Interrupts `<<color_track>>`
 |===
 
 Detect the color and keep track of coordinates from the image.
@@ -557,6 +581,7 @@ Clear the findings.
 a|.Context
 [disc]
   * Frequency 10.0 _Hz_
+* Updates port `<<output>>`
 a|.Throws
 [disc]
  * `exception ::ColorTracker::e_OUT_OF_MEM`
