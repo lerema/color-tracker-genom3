@@ -17,7 +17,6 @@
  */
 
 #pragma require "openrobots2-idl >= 2.1"
-#pragma require "felix-idl"
 #pragma require "vision-idl"
 
 #include "or/pose/pose_estimator.gen"
@@ -35,7 +34,7 @@ component ColorTracker {
   lang	  "c";
   doc 	  "A GenoM module for the ColorTracker using a monocular camera.";
 
-  codels-require "opencv4, felix-g3utils, eigen3, vision-idl";
+  codels-require "opencv4, felix-g3utils, vision-idl";
   uses		or_pose_estimator;
 
   exception e_BAD_IMAGE_PORT { short code; string<128> message; };

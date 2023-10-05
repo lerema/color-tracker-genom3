@@ -166,7 +166,7 @@ a|.Data structure
 a|.Data structure
 [disc]
  * `struct ::or::Environment::OccupancyGrid` `OccupancyGrid`
- ** `double` `data[10][10]`
+ ** `octet` `data[10][10]`
  ** `octet` `width`
  ** `octet` `height`
  ** `double` `resolution`

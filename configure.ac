@@ -34,7 +34,7 @@ PKG_CHECK_MODULES(requires, [
   vision-idl
 ])
 PKG_CHECK_MODULES(codels_requires, [
-  opencv4, felix-g3utils, eigen3, vision-idl
+  opencv4, felix-g3utils, vision-idl
 ])
 
 AC_PATH_PROG(GENOM3, [genom3], [no])
