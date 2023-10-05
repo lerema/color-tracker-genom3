@@ -347,7 +347,7 @@ a|.Context
   * Updates port `<<OccupancyGrid>>`
   * Updates port `<<PlatesInfo>>`
   * Updates port `<<output>>`
-    * Interrupts `<<color_track>>`
+  * Interrupts `<<color_track>>`
 |===
 
 Detect the color and keep track of coordinates from the image.
@@ -421,6 +421,27 @@ a|.Inputs
 |===
 
 Set the debug mode.
+
+'''
+
+[[set_camera_pose]]
+=== set_camera_pose (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `struct ::ColorTracker::Pose` `camera_pose`: Camera pose
+ ** `float` `x`
+ ** `float` `y`
+ ** `float` `z`
+ ** `float` `roll`
+ ** `float` `pitch`
+ ** `float` `yaw`
+
+|===
+
+Set the camera pose with respect to robot frame.
 
 '''
 

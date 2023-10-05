@@ -200,6 +200,7 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
             float distance_threshold,
             or_ColorTrack_PlateSequence *plates,
             or_ColorTrack_PlateSequence *all_detected_plates,
+            const ColorTracker_Pose *camera_pose,
             ColorTracker_BlobMap *blob_map, bool *new_findings,
             const ColorTracker_OccupancyGrid *OccupancyGrid,
             const ColorTracker_PlatesInfo *PlatesInfo,
@@ -299,32 +300,73 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
         double camera_x = 0.0, camera_y = 0.0, camera_z = 0.0;
         Tracking::imageToWorldCoordinates(image_x, image_y, focal_length, bounding_box, intrinsics, object_width, camera_x, camera_y, camera_z);
 
-        // Transform the coordinates from camera frame to world frame given the drone pose
-        // NOTE: Pom doesn't provide the rotation matrix, so we have to calculate it based on an assumption
+        // Camera to object transformation matrix
+        // TODO: Refactor using << operator
+        cv::Mat cam_to_object = cv::Mat::eye(4, 4, CV_64F);
+        cam_to_object.at<double>(0, 3) = camera_x;
+        cam_to_object.at<double>(1, 3) = camera_y;
+        cam_to_object.at<double>(2, 3) = camera_z;
+
+        // Camera to drone transformation matrix
+        cv::Mat cam_to_drone = cv::Mat::zeros(4, 4, CV_64F);
+        double roll = camera_pose->roll;
+        double pitch = camera_pose->pitch;
+        double yaw = camera_pose->yaw;
+
+        // REF: https://web.mit.edu/2.05/www/Handout/HO2.PDF
+        cam_to_drone.at<double>(0, 0) = cos(yaw) * cos(pitch);
+        cam_to_drone.at<double>(0, 1) = cos(yaw) * sin(pitch) * sin(roll) - sin(yaw) * cos(roll);
+        cam_to_drone.at<double>(0, 2) = cos(yaw) * sin(pitch) * cos(roll) + sin(yaw) * sin(roll);
+        cam_to_drone.at<double>(1, 0) = sin(yaw) * cos(pitch);
+        cam_to_drone.at<double>(1, 1) = sin(yaw) * sin(pitch) * sin(roll) + cos(yaw) * cos(roll);
+        cam_to_drone.at<double>(1, 2) = sin(yaw) * sin(pitch) * cos(roll) - cos(yaw) * sin(roll);
+        cam_to_drone.at<double>(2, 0) = -sin(pitch);
+        cam_to_drone.at<double>(2, 1) = cos(pitch) * sin(roll);
+        cam_to_drone.at<double>(2, 2) = cos(pitch) * cos(roll);
+        cam_to_drone.at<double>(3, 3) = 1.0;
+        cam_to_drone.at<double>(0, 3) = camera_pose->x;
+        cam_to_drone.at<double>(1, 3) = camera_pose->y;
+        cam_to_drone.at<double>(2, 3) = camera_pose->z;
+
+        // Drone to world transformation matrix
+        cv::Mat drone_to_world = cv::Mat::zeros(4, 4, CV_64F);
         cv::Mat R = cv::Mat::zeros(3, 3, CV_64F);
-        cv::Mat t = cv::Mat::zeros(3, 1, CV_64F);
         cv::Mat q = cv::Mat::zeros(4, 1, CV_64F);
+
         q.at<double>(0, 0) = DronePoseData->att._value.qx;
         q.at<double>(1, 0) = DronePoseData->att._value.qy;
         q.at<double>(2, 0) = DronePoseData->att._value.qz;
         q.at<double>(3, 0) = DronePoseData->att._value.qw;
-        double roll = 0.0, pitch = 3.14, yaw = 0.0;
         Tracking::getRotationMatrix(q, R);
-        t = (cv::Mat_<double>(3, 1) << DronePoseData->pos._value.x, DronePoseData->pos._value.y, DronePoseData->pos._value.z);
 
+        drone_to_world.at<double>(0, 0) = R.at<double>(0, 0);
+        drone_to_world.at<double>(0, 1) = R.at<double>(0, 1);
+        drone_to_world.at<double>(0, 2) = R.at<double>(0, 2);
+        drone_to_world.at<double>(1, 0) = R.at<double>(1, 0);
+        drone_to_world.at<double>(1, 1) = R.at<double>(1, 1);
+        drone_to_world.at<double>(1, 2) = R.at<double>(1, 2);
+        drone_to_world.at<double>(2, 0) = R.at<double>(2, 0);
+        drone_to_world.at<double>(2, 1) = R.at<double>(2, 1);
+        drone_to_world.at<double>(2, 2) = R.at<double>(2, 2);
+        drone_to_world.at<double>(3, 3) = 1.0;
+        drone_to_world.at<double>(0, 3) = DronePoseData->pos._value.x;
+        drone_to_world.at<double>(1, 3) = DronePoseData->pos._value.y;
+        drone_to_world.at<double>(2, 3) = DronePoseData->pos._value.z;
+
+        // Camera to world transformation matrix
+        cv::Mat cam_to_world = cv::Mat::eye(4, 4, CV_64F);
+        cam_to_world = drone_to_world * cam_to_drone * cam_to_object;
+
+        // Extract translation from transformation matrix
         cv::Mat world_coord = cv::Mat::zeros(3, 1, CV_64F);
-        cv::Mat camera_coord = cv::Mat::zeros(3, 1, CV_64F);
-        camera_coord.at<double>(0, 0) = camera_x;
-        camera_coord.at<double>(1, 0) = camera_y;
-        camera_coord.at<double>(2, 0) = camera_z;
-
-        world_coord = R * camera_coord + t;
+        world_coord.at<double>(0, 0) = cam_to_world.at<double>(0, 3);
+        world_coord.at<double>(1, 0) = cam_to_world.at<double>(1, 3);
+        world_coord.at<double>(2, 0) = cam_to_world.at<double>(2, 3);
 
         if (debug)
         {
             CODEL_LOG_WARNING("World coordinates: (%f, %f, %f)", world_coord.at<double>(0, 0), world_coord.at<double>(1, 0), world_coord.at<double>(2, 0));
-            CODEL_LOG_WARNING("Translation: (%f, %f, %f)", t.at<double>(0, 0), t.at<double>(1, 0), t.at<double>(2, 0));
-            CODEL_LOG_WARNING("Rotation: (%f, %f, %f)", R.at<double>(0, 0), R.at<double>(0, 1), R.at<double>(0, 2));
+            CODEL_LOG_WARNING("Drone coorindates: (%f, %f, %f)", drone_to_world.at<double>(0, 3), drone_to_world.at<double>(1, 3), drone_to_world.at<double>(2, 3));
         }
 
         // Convert relative world coordinates to absolute world coordinates

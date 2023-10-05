@@ -52,6 +52,11 @@ component ColorTracker {
     short index;
   };
 
+  struct Pose {
+    float x, y, z;
+    float roll, pitch, yaw;
+  };
+
   /* -------------------------- IDS --------------------------- */
   ids {
     or::sensor::intrinsics intrinsics;	        // Camera intrinsics
@@ -66,6 +71,7 @@ component ColorTracker {
     unsigned short current_index;	// current free index in the plate sequence
 
     or_pose_estimator::state frame_pose;
+    Pose camera_pose;
 
     boolean debug, show_frames, start_tracking;
     octet verbose_level;
@@ -115,7 +121,7 @@ component ColorTracker {
 
   activity color_track() {
     doc "Detect the color and keep track of coordinates from the image.";
-    after set_color, set_distance_threshold, set_object_size, set_focal_length;
+    after set_color, set_distance_threshold, set_object_size, set_focal_length, set_camera_pose;
     task track;
 
     codel <start> FetchPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose, 
@@ -125,7 +131,7 @@ component ColorTracker {
           ids out image_frame, ids out intrinsics, ids out extrinsics, ids out frame_pose, ids in debug)
           yield pause::poll, main, ether;
     codel <main> TrackObject(ids in start_tracking, ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids in object_width, ids in object_height, ids in focal_length,
-          port in DronePose, ids in distance_threshold, ids out plates, ids inout all_detected_plates,
+          port in DronePose, ids in distance_threshold, ids out plates, ids inout all_detected_plates, ids in camera_pose,
           ids out blob_map, ids out new_findings, port out OccupancyGrid, port out PlatesInfo, port out output, ids in debug, ids in show_frames)
           yield main, poll, publish, ether;
     codel <publish> PublishOG(ids in blob_map, port out OccupancyGrid)
@@ -144,6 +150,11 @@ component ColorTracker {
   attribute set_debug(in debug =: "Debug mode")
   {
     doc "Set the debug mode.";
+  };
+
+  attribute set_camera_pose(in camera_pose =: "Camera pose")
+  {
+    doc "Set the camera pose with respect to robot frame.";
   };
 
   attribute set_distance_threshold(in distance_threshold =: "Distance threshold to sample the coordinates")
