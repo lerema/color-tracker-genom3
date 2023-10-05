@@ -166,7 +166,7 @@ a|.Data structure
 a|.Data structure
 [disc]
  * `struct ::or::Environment::OccupancyGrid` `OccupancyGrid`
- ** `octet` `data[10][10]`
+ ** `sequence< octet >` `data`
  ** `octet` `width`
  ** `octet` `height`
  ** `double` `resolution`
@@ -442,6 +442,23 @@ a|.Inputs
 |===
 
 Set the camera pose with respect to robot frame.
+
+'''
+
+[[set_map_size]]
+=== set_map_size (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `float` `width` Estimated map width
+
+ * `float` `height` Estimated map height
+
+|===
+
+Set the size of the map.
 
 '''
 

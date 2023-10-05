@@ -44,16 +44,13 @@ component ColorTracker {
   exception e_OPENCV_ERROR { short code; string<128> message; };
   exception e_OUT_OF_MEM { short code; string<128> message; };
 
-
-  struct BlobMap {
-    boolean is_blobbed;
-    or::Environment::OccupancyGrid grid_map;
-    short index;
-  };
-
   struct Pose {
     float x, y, z;
     float roll, pitch, yaw;
+  };
+
+  struct Size {
+    float width, height;
   };
 
   /* -------------------------- IDS --------------------------- */
@@ -64,17 +61,13 @@ component ColorTracker {
     or::ColorTrack::PlateSequence plates, all_detected_plates;       // The plates sequence
     or::ColorTrack::ColorInfo color;	        // The color of the object to track
 
-    BlobMap blob_map;
-    boolean new_findings;	// true when a new findings has been found and can be published.
-
-    unsigned short current_index;	// current free index in the plate sequence
-
     or_pose_estimator::state frame_pose;
     Pose camera_pose;
 
     boolean debug, show_frames, start_tracking;
     octet verbose_level;
     float distance_threshold, object_width, object_height, focal_length;
+    Size map_size;
   };
 
   /* ------------- DEFINITION OF PORTS -------------- */
@@ -120,21 +113,21 @@ component ColorTracker {
 
   activity color_track() {
     doc "Detect the color and keep track of coordinates from the image.";
-    after set_color, set_distance_threshold, set_object_size, set_focal_length, set_camera_pose;
+    after set_color, set_distance_threshold, set_object_size, set_focal_length, set_camera_pose, set_map_size;
     task track;
 
-    codel <start> FetchPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose, 
-          ids out plates, ids out all_detected_plates, ids out blob_map, ids in debug)
+    codel <start> FetchPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose,
+          ids out plates, ids out all_detected_plates, ids in debug)
           yield pause::start, poll;
     codel <poll> FetchDataFromPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose,
           ids out image_frame, ids out intrinsics, ids out extrinsics, ids out frame_pose, ids in debug)
           yield pause::poll, main, ether;
     codel <main> TrackObject(ids in start_tracking, ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids in object_width, ids in object_height, ids in focal_length,
           port in DronePose, ids in distance_threshold, ids out plates, ids inout all_detected_plates, ids in camera_pose,
-          ids out blob_map, ids out new_findings, port out OccupancyGrid, port out PlatesInfo, port out output, ids in debug, ids in show_frames)
+          port out PlatesInfo, port out output, ids in debug, ids in show_frames)
           yield main, poll, publish, ether;
-    codel <publish> PublishOG(ids in blob_map, port out OccupancyGrid)
-          yield main, ether;
+    codel <publish> PublishOG(ids in object_width, ids in object_height, ids in map_size, port in PlatesInfo, port out OccupancyGrid)
+          yield poll, ether;
 
     throw e_BAD_IMAGE_PORT, e_BAD_POSE_PORT, e_BAD_OG_PORT, e_BAD_TARGET_PORT, e_OPENCV_ERROR;
     interrupts color_track;
@@ -154,6 +147,11 @@ component ColorTracker {
   attribute set_camera_pose(in camera_pose =: "Camera pose")
   {
     doc "Set the camera pose with respect to robot frame.";
+  };
+
+  attribute set_map_size(in map_size.width = 10.0 : "Estimated map width", in map_size.height = 10.0 : "Estimated map height")
+  {
+    doc "Set the size of the map.";
   };
 
   attribute set_distance_threshold(in distance_threshold =: "Distance threshold to sample the coordinates")
@@ -187,12 +185,6 @@ component ColorTracker {
   };
 
   /* ------------------ SERVICE DEFINITION: Functions -------------------- */
-  function set_map_size(in octet map_width =: "Estimated map width", in octet map_height =: "Estimated map height")
-  {
-    doc "Set the size of the map.";
-    codel SetMapSize(local in map_width, local in map_height, ids out blob_map);
-    throw e_BAD_OG_PORT;
-  };
 
   function clear_findins()
   {

@@ -8,8 +8,12 @@ module Environment {
     const short MAP_WIDTH = 10; // 10m
     const short MAP_HEIGHT = 10; // 10m
 
+    const short FREE_CELL = 0;
+    const short OCCUPIED_CELL = 100;
+    const short UNKNOWN_CELL = -1;
+
     struct OccupancyGrid {
-        octet data[MAP_WIDTH][MAP_HEIGHT];
+        sequence<octet> data;
         octet width;
         octet height;
         double resolution;

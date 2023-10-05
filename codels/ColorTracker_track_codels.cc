@@ -41,8 +41,7 @@ FetchPorts(const ColorTracker_Frame *Frame,
            const ColorTracker_DronePose *DronePose,
            or_ColorTrack_PlateSequence *plates,
            or_ColorTrack_PlateSequence *all_detected_plates,
-           ColorTracker_BlobMap *blob_map, bool debug,
-           const genom_context self)
+           bool debug, const genom_context self)
 {
     // Check if all ports are connected and available
     if (!check_port_in_p(Frame))
@@ -82,22 +81,6 @@ FetchPorts(const ColorTracker_Frame *Frame,
         // warnx("%s", msg.message);
         return ColorTracker_e_OUT_OF_MEM(&msg, self);
     }
-
-    // Initialize blob map
-    blob_map->is_blobbed = false;
-    blob_map->grid_map.origin_x = 0.0;
-    blob_map->grid_map.origin_y = 0.0;
-    blob_map->grid_map.width = 10.0;
-    blob_map->grid_map.height = 10.0;
-    blob_map->grid_map.resolution = 0.1;
-    // for (int i = 0; i < blob_map->grid_map.width / blob_map->grid_map.resolution; i++)
-    // {
-    //   for (int j = 0; j < blob_map->grid_map.height / blob_map->grid_map.resolution; j++)
-    //   {
-    //     blob_map->grid_map.data[i][j] = 0;
-    //   }
-    // }
-    blob_map->index = 0;
 
     if (debug)
     {
@@ -201,8 +184,6 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
             or_ColorTrack_PlateSequence *plates,
             or_ColorTrack_PlateSequence *all_detected_plates,
             const ColorTracker_Pose *camera_pose,
-            ColorTracker_BlobMap *blob_map, bool *new_findings,
-            const ColorTracker_OccupancyGrid *OccupancyGrid,
             const ColorTracker_PlatesInfo *PlatesInfo,
             const ColorTracker_output *output, bool debug,
             bool show_frames, const genom_context self)
@@ -389,33 +370,75 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
         PlatesInfo->data(self)->num_interesing_spots = plates->seq._length;
         PlatesInfo->write(self);
 
-        *new_findings = true;
+        return ColorTracker_publish;
     }
     else
     {
-        *new_findings = false;
         if (debug)
         {
             CODEL_LOG_WARNING("Object not found");
         }
+        return ColorTracker_poll;
     }
-
-    return ColorTracker_poll;
 }
 
 /** Codel PublishOG of activity color_track.
  *
  * Triggered by ColorTracker_publish.
- * Yields to ColorTracker_main, ColorTracker_ether.
+ * Yields to ColorTracker_poll, ColorTracker_ether.
  * Throws ColorTracker_e_OUT_OF_MEM, ColorTracker_e_BAD_IMAGE_PORT,
  *        ColorTracker_e_BAD_POSE_PORT, ColorTracker_e_BAD_OG_PORT,
  *        ColorTracker_e_BAD_TARGET_PORT, ColorTracker_e_OPENCV_ERROR.
  */
 genom_event
-PublishOG(const ColorTracker_BlobMap *blob_map,
+PublishOG(float object_width, float object_height,
+          const ColorTracker_Size *map_size,
+          const ColorTracker_PlatesInfo *PlatesInfo,
           const ColorTracker_OccupancyGrid *OccupancyGrid,
           const genom_context self)
 {
-    /* skeleton sample: insert your code */
-    /* skeleton sample */ return ColorTracker_main;
+    // Reserve memory
+    or_Environment_OccupancyGrid *grid_map = OccupancyGrid->data(self);
+    if (genom_sequence_reserve(&(grid_map->data), map_size->width * map_size->height) == -1)
+    {
+        ColorTracker_e_OUT_OF_MEM_detail msg;
+        snprintf(msg.message, sizeof(msg.message), "%s", "Failed to reserve memory for grid map");
+        // warnx("%s", msg.message);
+        return ColorTracker_e_OUT_OF_MEM(&msg, self);
+    }
+
+    // Inflate the grid cells with the size of the object
+    int grid_width = (int)round(object_width / grid_map->resolution);
+    int grid_height = (int)round(object_height / grid_map->resolution);
+
+    grid_map->width = map_size->width;
+    grid_map->height = map_size->height;
+    grid_map->resolution = or_Environment_MAP_RESOLUTION;
+    grid_map->origin_x = 0.0;
+    grid_map->origin_y = 0.0;
+    grid_map->data._length = map_size->width * map_size->height;
+    grid_map->data._maximum = map_size->width * map_size->height;
+
+    // Fill the map with free cells
+    std::fill(grid_map->data._buffer, grid_map->data._buffer + grid_map->data._length, static_cast<uint8_t>(or_Environment_FREE_CELL));
+
+    // Fill the map with occupied cells
+    for (uint i = 0; i < PlatesInfo->data(self)->seq._length; i++)
+    {
+        // Get the world coordinates of the plate
+        double plate_x = PlatesInfo->data(self)->seq._buffer[i].coord.x;
+        double plate_y = PlatesInfo->data(self)->seq._buffer[i].coord.y;
+
+        // Convert world coordinates to grid coordinates
+        int grid_x = (int)round((plate_x - grid_map->origin_x) / grid_map->resolution);
+        int grid_y = (int)round((plate_y - grid_map->origin_y) / grid_map->resolution);
+
+        // Inflate the grid cells
+        grid_map->data._buffer[grid_y * grid_map->width + grid_x] = static_cast<uint8_t>(or_Environment_OCCUPIED_CELL);
+    }
+
+    // Publish the occupancy grid
+    OccupancyGrid->write(self);
+
+    return ColorTracker_poll;
 }
