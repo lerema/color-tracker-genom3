@@ -66,8 +66,8 @@ component ColorTracker {
 
     boolean debug, show_frames, start_tracking;
     octet verbose_level;
-    float distance_threshold, object_width, object_height, focal_length;
-    Size map_size;
+    float distance_threshold, focal_length;
+    Size map_size, object_size;
   };
 
   /* ------------- DEFINITION OF PORTS -------------- */
@@ -122,11 +122,11 @@ component ColorTracker {
     codel <poll> FetchDataFromPorts(port in Frame, port in Intrinsics, port in Extrinsics, port in DronePose,
           ids out image_frame, ids out intrinsics, ids out extrinsics, ids out frame_pose, ids in debug)
           yield pause::poll, main, ether;
-    codel <main> TrackObject(ids in start_tracking, ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids in object_width, ids in object_height, ids in focal_length,
+    codel <main> TrackObject(ids in start_tracking, ids in image_frame, ids in intrinsics, ids in extrinsics, ids in color, ids in object_size, ids in focal_length,
           port in DronePose, ids in distance_threshold, ids out plates, ids inout all_detected_plates, ids in camera_pose,
           port out PlatesInfo, port out output, ids in debug, ids in show_frames)
           yield main, poll, publish, ether;
-    codel <publish> PublishOG(ids in object_width, ids in object_height, ids in map_size, port in PlatesInfo, port out OccupancyGrid)
+    codel <publish> PublishOG(ids in object_size, ids in map_size, port in PlatesInfo, port out OccupancyGrid)
           yield poll, ether;
 
     throw e_BAD_IMAGE_PORT, e_BAD_POSE_PORT, e_BAD_OG_PORT, e_BAD_TARGET_PORT, e_OPENCV_ERROR;
@@ -174,7 +174,7 @@ component ColorTracker {
     doc "Show image frames.";
   };
 
-  attribute set_object_size(in object_width =: "Object width", in object_height =: "Object height")
+  attribute set_object_size(in object_size.width =: "Object width", in object_size.height =: "Object length / height")
   {
     doc "Set the size of the object.";
   };

@@ -452,9 +452,9 @@ Set the camera pose with respect to robot frame.
 |===
 a|.Inputs
 [disc]
- * `float` `width` Estimated map width
+ * `float` `width` (default `"10"`) Estimated map width
 
- * `float` `height` Estimated map height
+ * `float` `height` (default `"10"`) Estimated map height
 
 |===
 
@@ -529,9 +529,9 @@ Show image frames.
 |===
 a|.Inputs
 [disc]
- * `float` `object_width` Object width
+ * `float` `width` Object width
 
- * `float` `object_height` Object height
+ * `float` `height` Object length / height
 
 |===
 

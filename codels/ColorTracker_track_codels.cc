@@ -177,8 +177,8 @@ genom_event
 TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
             const or_sensor_intrinsics *intrinsics,
             const or_sensor_extrinsics *extrinsics,
-            const or_ColorTrack_ColorInfo *color, float object_width,
-            float object_height, float focal_length,
+            const or_ColorTrack_ColorInfo *color,
+            const ColorTracker_Size *object_size, float focal_length,
             const ColorTracker_DronePose *DronePose,
             float distance_threshold,
             or_ColorTrack_PlateSequence *plates,
@@ -279,7 +279,7 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
 
         // Convert pixel coordinates to cartesian coordinates
         double camera_x = 0.0, camera_y = 0.0, camera_z = 0.0;
-        Tracking::imageToWorldCoordinates(image_x, image_y, focal_length, bounding_box, intrinsics, object_width, camera_x, camera_y, camera_z);
+        Tracking::imageToWorldCoordinates(image_x, image_y, focal_length, bounding_box, intrinsics, object_size->width, camera_x, camera_y, camera_z);
 
         // Camera to object transformation matrix
         // TODO: Refactor using << operator
@@ -391,7 +391,7 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
  *        ColorTracker_e_BAD_TARGET_PORT, ColorTracker_e_OPENCV_ERROR.
  */
 genom_event
-PublishOG(float object_width, float object_height,
+PublishOG(const ColorTracker_Size *object_size,
           const ColorTracker_Size *map_size,
           const ColorTracker_PlatesInfo *PlatesInfo,
           const ColorTracker_OccupancyGrid *OccupancyGrid,
@@ -408,8 +408,8 @@ PublishOG(float object_width, float object_height,
     }
 
     // Inflate the grid cells with the size of the object
-    int grid_width = (int)round(object_width / grid_map->resolution);
-    int grid_height = (int)round(object_height / grid_map->resolution);
+    int grid_width = (int)round(object_size->width / grid_map->resolution);
+    int grid_height = (int)round(object_size->height / grid_map->resolution);
 
     grid_map->width = map_size->width;
     grid_map->height = map_size->height;
