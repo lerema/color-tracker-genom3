@@ -186,7 +186,8 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
             const ColorTracker_Pose *camera_pose,
             const ColorTracker_PlatesInfo *PlatesInfo,
             const ColorTracker_output *output, bool debug,
-            bool show_frames, const genom_context self)
+            bool show_frames, bool publish_og,
+            const genom_context self)
 {
 
     if (!start_tracking)
@@ -369,8 +370,6 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
         PlatesInfo->data(self)->seq._maximum = plates->seq._length;
         PlatesInfo->data(self)->num_interesing_spots = plates->seq._length;
         PlatesInfo->write(self);
-
-        return ColorTracker_publish;
     }
     else
     {
@@ -378,8 +377,11 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
         {
             CODEL_LOG_WARNING("Object not found");
         }
-        return ColorTracker_poll;
     }
+    if (publish_og)
+        return ColorTracker_publish;
+    else
+        return ColorTracker_poll;
 }
 
 /** Codel PublishOG of activity color_track.

@@ -507,6 +507,21 @@ Set the verbose level.
 
 '''
 
+[[publish_occupancy_grid]]
+=== publish_occupancy_grid (attribute)
+
+[role="small", width="50%", float="right", cols="1"]
+|===
+a|.Inputs
+[disc]
+ * `boolean` `publish_og` Publish occupancy grid
+
+|===
+
+Publish the occupancy grid.
+
+'''
+
 [[show_image_frames]]
 === show_image_frames (attribute)
 

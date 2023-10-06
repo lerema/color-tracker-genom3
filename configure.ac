@@ -44,7 +44,7 @@ fi
 
 dnl --with-templates option
 AG_OPT_TEMPLATES([$GENOM3 ],
-    [$srcdir/ColorTracker.gen])
+    [ColorTracker.gen])
 
 dnl Doc
 AM_MISSING_PROG([ASCIIDOCTOR], [asciidoctor])
