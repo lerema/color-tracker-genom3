@@ -179,8 +179,8 @@ namespace Tracking
     {
         double dx = c2.coord.x - c1.coord.x;
         double dy = c2.coord.y - c1.coord.y;
-        double dz = c2.coord.z - c1.coord.z;
-        return std::sqrt(dx * dx + dy * dy + dz * dz);
+        // double dz = c2.coord.z - c1.coord.z;
+        return std::sqrt(dx * dx + dy * dy);
     }
 
     // Function to group coordinates based on a threshold
