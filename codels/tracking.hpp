@@ -23,6 +23,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/types_c.h>
+#include <eigen3/Eigen/Geometry>
 
 #include "ColorTracker_c_types.h"
 #include "acColorTracker.h"
@@ -112,34 +113,49 @@ namespace Tracking
         return object_found;
     }
 
-    void imageToWorldCoordinates(const int &image_x, const int &image_y, const double &f, const cv::Rect bounding_box, const or_sensor_intrinsics *intrinsics, double object_width, double &xw, double &yw, double &zw)
+    void imageToWorldCoordinates(const int &image_x, const int &image_y,
+                                 const ColorTracker_CameraInfo *camera_info,
+                                 const or_pose_estimator_state *drone_state,
+                                 double &xw, double &yw, double &zw)
     {
-        // REF: https://stackoverflow.com/questions/12007775/to-calculate-world-coordinates-from-screen-coordinates-with-opencv
-        auto fx = intrinsics->calib.fx;
-        auto fy = intrinsics->calib.fy;
-        auto cx = intrinsics->calib.cx;
-        auto cy = intrinsics->calib.cy;
+        // Get the camera parameters
+        double focal_length = camera_info->focal_length;
+        double field_of_view = camera_info->field_of_view;
+        double pixel_size = camera_info->pixel_size;
+        double image_width = camera_info->image_size.width;
+        double image_height = camera_info->image_size.height;
 
-        // F = (P x D) / W
-        // auto f = 480.0; // Fixed focal length for object of size 0.5m at 1m distance
-        // D’ = (W x F) / P
-        auto z = object_width * f / (bounding_box.width);
+        double drone_x = drone_state->pos._value.x;
+        double drone_y = drone_state->pos._value.y;
+        double drone_z = drone_state->pos._value.z;
+        double drone_qx = drone_state->att._value.qx;
+        double drone_qy = drone_state->att._value.qy;
+        double drone_qz = drone_state->att._value.qz;
+        double drone_qw = drone_state->att._value.qw;
 
-        // x_world = (x_screen - c_x) * z_world / f_x
-        // y_world = (y_screen - c_y) * z_world / f_y
+        // Calculate the distance to target with the pinhole camera model
+        Eigen::Vector3d A(-(image_y - image_height / 2) * pixel_size,
+                          -(image_x - image_width / 2) * pixel_size,
+                          -focal_length);
 
-        // This is calculated in Camera coordinate system
-        auto xw_tmp = (image_x - cx) * z / fx;
-        auto yw_tmp = (image_y - cy) * z / fy;
-        auto zw_tmp = z;
+        // Build Quaternion vector
+        Eigen::Quaternion<double> Q(drone_qw, drone_qx, drone_qy, drone_qz);
 
-        // Extrinsics matrix is considered to be identity, so we can directly use the camera coordinates
-        // X axis of camera is -Y axis of drone
-        // Y axis of camera is -X axis of drone
-        // Z axis of camera is -Z axis of drone
-        xw = -yw_tmp;
-        yw = -xw_tmp;
-        zw = -zw_tmp;
+        // Vector to Blob in world frame
+        Eigen::Vector3d Vw = Q * A;
+
+        // Build Drone Position vector
+        Eigen::Vector3d P(drone_x, drone_y, drone_z);
+
+        // Calculate Intersection
+        double alpha = P(2) / Vw(2);
+
+        // Calculate Blob Position in world frame
+        Eigen::Vector3d Pw = P - alpha * Vw;
+
+        xw = Pw(0);
+        yw = Pw(1);
+        zw = Pw(2);
     }
 
     void getRotationMatrix(const cv::Mat quaternion, cv::Mat R)
@@ -223,23 +239,23 @@ namespace Tracking
 
     or_ColorTrack_PlateInfo findTargetPoint(const std::vector<or_ColorTrack_PlateInfo> &points)
     {
-        // Choose an arbitrary starting point as the initial target point
+        // Apply K means to find the target point
         or_ColorTrack_PlateInfo target = points[0];
         double minAverageDistance = std::numeric_limits<double>::max();
 
-        for (const auto &p : points)
+        for (size_t i = 0; i < points.size(); ++i)
         {
-            double totalDistance = 0.0;
-            for (const auto &other : points)
+            double averageDistance = 0;
+            for (size_t j = 0; j < points.size(); ++j)
             {
-                totalDistance += distance(p, other);
+                averageDistance += distance(points[i], points[j]);
             }
+            averageDistance /= points.size();
 
-            double averageDistance = totalDistance / points.size();
             if (averageDistance < minAverageDistance)
             {
-                target = p;
                 minAverageDistance = averageDistance;
+                target = points[i];
             }
         }
 

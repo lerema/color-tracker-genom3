@@ -1,5 +1,8 @@
 
-lib_LTLIBRARIES = libColorTracker_codels.la
+lib_LTLIBRARIES =
+
+# ColorTracker codels library
+lib_LTLIBRARIES += libColorTracker_codels.la
 
 libColorTracker_codels_la_SOURCES  =	ColorTracker_c_types.h
 libColorTracker_codels_la_SOURCES +=	ColorTracker_codels.cc
@@ -12,7 +15,7 @@ libColorTracker_codels_la_LIBADD  +=	$(codels_requires_LIBS)
 libColorTracker_codels_la_LDFLAGS  =	-release $(PACKAGE_VERSION)
 
 
-# idl  mappings
+# idl mappings
 BUILT_SOURCES=	ColorTracker_c_types.h
 CLEANFILES=	${BUILT_SOURCES}
 

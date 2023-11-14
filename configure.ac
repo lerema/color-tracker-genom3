@@ -34,7 +34,7 @@ PKG_CHECK_MODULES(requires, [
   vision-idl
 ])
 PKG_CHECK_MODULES(codels_requires, [
-  opencv4, felix-g3utils, vision-idl
+  opencv4, felix-g3utils, vision-idl, eigen3
 ])
 
 AC_PATH_PROG(GENOM3, [genom3], [no])
@@ -44,7 +44,7 @@ fi
 
 dnl --with-templates option
 AG_OPT_TEMPLATES([$GENOM3 ],
-    [$srcdir/ColorTracker.gen])
+    [ColorTracker.gen])
 
 dnl Doc
 AM_MISSING_PROG([ASCIIDOCTOR], [asciidoctor])

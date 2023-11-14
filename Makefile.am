@@ -26,7 +26,7 @@ distclean-local:
 merge: merge-interactive
 merge-%:
 	cd ${top_srcdir} && ${GENOM3}  \
-		skeleton -l 'c++' -m $* ColorTracker.gen
+	  skeleton -l 'c++' -m $* ColorTracker.gen
 
 # documentation
 dist_doc_DATA=	README.html README.adoc
