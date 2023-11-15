@@ -121,7 +121,6 @@ namespace Tracking
         // Get the camera parameters
         double focal_length = camera_info->focal_length;
         double field_of_view = camera_info->field_of_view;
-        double pixel_size = camera_info->pixel_size;
         double image_width = camera_info->image_size.width;
         double image_height = camera_info->image_size.height;
 
@@ -132,6 +131,10 @@ namespace Tracking
         double drone_qy = drone_state->att._value.qy;
         double drone_qz = drone_state->att._value.qz;
         double drone_qw = drone_state->att._value.qw;
+
+        // Calculate the pixel size based on drone height and field of view
+        double pixel_size =
+            (drone_z * focal_length * tan(field_of_view / 2)) / image_width;
 
         // Calculate the distance to target with the pinhole camera model
         Eigen::Vector3d A(-(image_y - image_height / 2) * pixel_size,

@@ -170,7 +170,8 @@ FetchDataFromPorts(const ColorTracker_Frame *Frame,
     // double fov_y = 2 * atan(intrinsics->height / (2 * focal_length));
 
     // Pixel size in mm
-    camera_info->pixel_size = (2 * camera_info->focal_length * tan(camera_info->field_of_view / 2)) / image_frame->width;
+    // // Moved the calculation at the time of world coordinates calculation
+    // camera_info->pixel_size = (camera_info->focal_length * tan(camera_info->field_of_view / 2)) / image_frame->width;
     // double pixel_size_y = (2 * focal_length * tan(fov_y / 2)) / intrinsics->height;
 
     // Image Size
