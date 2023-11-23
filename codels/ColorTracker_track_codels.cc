@@ -299,7 +299,7 @@ TrackObject(bool start_tracking, const or_sensor_frame *image_frame,
         }
 
         double target_x = 0.0, target_y = 0.0, target_z = 0.0;
-        Tracking::imageToWorldCoordinates(image_x, image_y, camera_info, DronePoseData, target_x, target_y, target_z);
+        Tracking::imageToWorldCoordinates(image_x, image_y, camera_info, DronePoseData, camera_pose, target_x, target_y, target_z);
 
         if (debug)
         {

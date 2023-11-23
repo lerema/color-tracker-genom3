@@ -116,6 +116,7 @@ namespace Tracking
     void imageToWorldCoordinates(const int &image_x, const int &image_y,
                                  const ColorTracker_CameraInfo *camera_info,
                                  const or_pose_estimator_state *drone_state,
+                                 const ColorTracker_Pose *camera_pose,
                                  double &xw, double &yw, double &zw)
     {
         // Get the camera parameters
@@ -132,6 +133,27 @@ namespace Tracking
         double drone_qz = drone_state->att._value.qz;
         double drone_qw = drone_state->att._value.qw;
 
+        double camera_x = camera_pose->x;
+        double camera_y = camera_pose->y;
+        double camera_z = camera_pose->z;
+        double camera_roll = camera_pose->roll;
+        double camera_pitch = camera_pose->pitch;
+        double camera_yaw = camera_pose->yaw;
+
+        // Calculate the translation vector of the camera in drone frame
+        Eigen::Vector3d Tcd(camera_x, camera_y, camera_z);
+
+        // Calculate the quaternion of the camera
+        Eigen::Quaternion<double> Qc;
+        Qc = Eigen::AngleAxisd(camera_yaw, Eigen::Vector3d::UnitZ()) *
+             Eigen::AngleAxisd(camera_pitch, Eigen::Vector3d::UnitY()) *
+             Eigen::AngleAxisd(camera_roll, Eigen::Vector3d::UnitX());
+
+        // Build Drone Position vector
+        Eigen::Vector3d Pd(drone_x, drone_y, drone_z);
+        // Build Quaternion vector
+        Eigen::Quaternion<double> Qd(drone_qw, drone_qx, drone_qy, drone_qz);
+
         // Calculate the pixel size based on drone height and field of view
         double pixel_size =
             (drone_z * focal_length * tan(field_of_view / 2)) / image_width;
@@ -141,20 +163,17 @@ namespace Tracking
                           -(image_x - image_width / 2) * pixel_size,
                           -focal_length);
 
-        // Build Quaternion vector
-        Eigen::Quaternion<double> Q(drone_qw, drone_qx, drone_qy, drone_qz);
+        // Calculate the translation vector of the camera in world frame
+        Eigen::Vector3d Tc = Qd * Tcd + Pd;
 
         // Vector to Blob in world frame
-        Eigen::Vector3d Vw = Q * A;
+        Eigen::Vector3d Vw = Qd * Qc * A;
 
-        // Build Drone Position vector
-        Eigen::Vector3d P(drone_x, drone_y, drone_z);
-
-        // Calculate Intersection
-        double alpha = P(2) / Vw(2);
+        // Calculate Intersept Point
+        double alpha = (Tc(2) - drone_z) / Vw(2);
 
         // Calculate Blob Position in world frame
-        Eigen::Vector3d Pw = P - alpha * Vw;
+        Eigen::Vector3d Pw = Pd - alpha * Vw;
 
         xw = Pw(0);
         yw = Pw(1);
